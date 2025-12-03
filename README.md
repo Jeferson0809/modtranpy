@@ -58,9 +58,9 @@ python test_tud.py
 
 ⚙️ Requirements
 
--A local licensed installation of MODTRAN 5
+● A local licensed installation of MODTRAN 5
 
--The directory passed to set_modtran_dir() must contain the MODTRAN executable
+● The directory passed to set_modtran_dir() must contain the MODTRAN executable
 
 Example:
 C:\PcModWin5\Bin\
