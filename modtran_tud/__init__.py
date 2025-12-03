@@ -3,6 +3,7 @@ import numpy as np
 
 from . import rtm_simple as _rtm
 from .plotting import plot_TUD
+from .io_utils import save_tud_npz, load_tud_npz
 
 
 @dataclass
@@ -16,7 +17,14 @@ class TUDResult:
     o3_scale: float
 
 
-__all__ = ["run_TUD", "TUDResult", "set_modtran_dir", "plot_TUD"]
+__all__ = [
+    "run_TUD",
+    "TUDResult",
+    "set_modtran_dir",
+    "plot_TUD",
+    "save_tud_npz",
+    "load_tud_npz",
+]
 
 
 def set_modtran_dir(path: str, exe_name: str = "Mod5.2.1.0.exe"):

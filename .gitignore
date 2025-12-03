@@ -1,3 +1,8 @@
 __pycache__/
 *.pyc
-outputs/
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
