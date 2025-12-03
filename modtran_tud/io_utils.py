@@ -1,8 +1,6 @@
 import numpy as np
-from . import TUDResult
 
-
-def save_tud_npz(result: TUDResult, path: str) -> None:
+def save_tud_npz(result, path: str) -> None:
     """
     Save a TUDResult object to a compressed .npz file.
 
@@ -25,11 +23,12 @@ def save_tud_npz(result: TUDResult, path: str) -> None:
     )
 
 
-def load_tud_npz(path: str) -> TUDResult:
+def load_tud_npz(path: str):
     """
     Load a TUDResult object from a .npz file previously saved
     with save_tud_npz.
     """
+    from . import TUDResult  # local import to avoid circular import
     data = np.load(path)
     return TUDResult(
         wavelength=data["wavelength"],
