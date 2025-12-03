@@ -25,17 +25,47 @@ def load_template(template_name: str):
 # -------------------------------
 # 1) Construir TAPE5 desde template
 # -------------------------------
-def build_tape5(template_name, Tsurf, h2o_scale=1.0, o3_scale=1.0):
+def build_tape5(
+    template_name,
+    Tsurf,
+    h2o_scale=1.0,
+    o3_scale=1.0,
+    h1=None,
+    h2=None,
+    sensor_center=None,
+    sensor_width=None,
+):
+    """
+    Load the TAPE5 template and replace placeholders for:
+    - surface temperature
+    - H2O and O3 scaling
+    - H1 / H2 spectral parameters (optional)
+    - sensor spectral response center / width (optional)
+    """
     template_path = load_template(template_name)
 
     with open(template_path, "r", encoding="latin-1", errors="replace") as f:
         txt = f.read()
 
-    txt = txt.replace("TSURF",    f"{Tsurf:.2f}")
+    # Mandatory replacements
+    txt = txt.replace("TSURF", f"{Tsurf:.2f}")
     txt = txt.replace("H2O_SCALE", f"{h2o_scale:.3f}")
-    txt = txt.replace("O3_SCALE",  f"{o3_scale:.3f}")
+    txt = txt.replace("O3_SCALE", f"{o3_scale:.3f}")
+
+    # Optional: H1 / H2 (e.g. 6.000000 0.001500)
+    if h1 is not None:
+        txt = txt.replace("H1_VALUE", f"{h1:.6f}")
+    if h2 is not None:
+        txt = txt.replace("H2_VALUE", f"{h2:.6f}")
+
+    # Optional: sensor spectral center / width (the red-box numbers)
+    if sensor_center is not None:
+        txt = txt.replace("SENSOR_CENTER", f"{sensor_center:.5f}")
+    if sensor_width is not None:
+        txt = txt.replace("SENSOR_WIDTH", f"{sensor_width:.5f}")
 
     return txt
+
 
 
 
@@ -169,7 +199,26 @@ def parse_tape6(path):
 # -------------------------------
 # 4) Simulación UP + DOWN y empaquetado
 # -------------------------------
-def simulate_one(Tsurf, case_name, h2o_scale, o3_scale):
+def simulate_one(
+    Tsurf,
+    case_name,
+    h2o_scale,
+    o3_scale,
+    h1=None,
+    h2=None,
+    sensor_center=None,
+    sensor_width=None,
+):
+    """
+    Run two MODTRAN cases:
+      - UP: sensor looking down at surface (upwelling and transmittance)
+      - DOWN: sensor looking up to sky (downwelling)
+
+    Extra parameters:
+      h1, h2           -> spectral parameters written into TAPE5 (H1_VALUE, H2_VALUE)
+      sensor_center    -> sensor spectral response center (SENSOR_CENTER)
+      sensor_width     -> sensor spectral width (SENSOR_WIDTH)
+    """
     global MODTRAN_DIR, OUTPUTS_DIR
 
     if MODTRAN_DIR is None:
@@ -181,30 +230,51 @@ def simulate_one(Tsurf, case_name, h2o_scale, o3_scale):
         OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
         os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
-    tape5_up = build_tape5("tape5_template_up", Tsurf, h2o_scale, o3_scale)
+    # --- UP case ---
+    tape5_up = build_tape5(
+        "tape5_template_up",
+        Tsurf,
+        h2o_scale,
+        o3_scale,
+        h1=h1,
+        h2=h2,
+        sensor_center=sensor_center,
+        sensor_width=sensor_width,
+    )
     tp6_up_path = run_modtran(tape5_up, f"{case_name}_UP")
     res_up = parse_tape6(tp6_up_path)
 
-    tape5_down = build_tape5("tape5_template_down", Tsurf, h2o_scale, o3_scale)
+    # --- DOWN case ---
+    tape5_down = build_tape5(
+        "tape5_template_down",
+        Tsurf,
+        h2o_scale,
+        o3_scale,
+        h1=h1,
+        h2=h2,
+        sensor_center=sensor_center,
+        sensor_width=sensor_width,
+    )
     tp6_down_path = run_modtran(tape5_down, f"{case_name}_DOWN")
     res_down = parse_tape6(tp6_down_path)
 
-    up_micro   = res_up["total_radiance"]   * 1e6
+    up_micro = res_up["total_radiance"] * 1e6
     down_micro = res_down["total_radiance"] * 1e6
 
     res = {
-        "wavelength":       res_up["wavelength"],
-        "up_microflicks":   up_micro,
-        "down_microflicks": down_micro,
-        "transmittance":    res_up["transmittance"],
-        "path_thermal":     res_up["path_thermal"],
-        "scat_part":        res_up["scat_part"],
-        "surface_emission": res_up["surface_emission"],
-        "surface_reflected":res_up["surface_reflected"],
-        "T_surface":        Tsurf,
-        "h2o_scale":        h2o_scale,
-        "o3_scale":         o3_scale,
-        "tp6_up":           tp6_up_path,
-        "tp6_down":         tp6_down_path,
+        "wavelength":        res_up["wavelength"],
+        "up_microflicks":    up_micro,
+        "down_microflicks":  down_micro,
+        "transmittance":     res_up["transmittance"],
+        "path_thermal":      res_up["path_thermal"],
+        "scat_part":         res_up["scat_part"],
+        "surface_emission":  res_up["surface_emission"],
+        "surface_reflected": res_up["surface_reflected"],
+        "T_surface":         Tsurf,
+        "h2o_scale":         h2o_scale,
+        "o3_scale":          o3_scale,
+        "tp6_up":            tp6_up_path,
+        "tp6_down":          tp6_down_path,
     }
     return res
+
