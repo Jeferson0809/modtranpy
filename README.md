@@ -38,7 +38,8 @@ from modtran_tud import (
 # Point to your local MODTRAN 5 installation
 set_modtran_dir(r"C:\PcModWin5\Bin")
 
-# Run a simulation
+# Run a simulation (Tsurf,h2o_scale,o3_scale)
+
 res = run_TUD(300.0, 1.0, 1.0)
 
 # Save the result as .npz
