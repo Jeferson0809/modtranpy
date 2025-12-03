@@ -1,23 +1,24 @@
-[project]
-name = "modtran_tud"
-version = "0.1.0"
-description = "Python wrapper around MODTRAN 5 to compute TUD (Transmittance, Upwelling, Downwelling) for thermal bands."
-readme = "README.md"
-requires-python = ">=3.10"
-authors = [
-  { name = "Jeferson", email = jefersonacevedo08@gmail.com" }
-]
-dependencies = [
-  "numpy",
-  "pandas"
-]
-
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "modtran-tud"
+version = "0.1.0"
+description = "Wrapper around MODTRAN 5 to compute TUD (Transmittance, Upwelling, Downwelling)."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Jeferson", email = "jefersonacevedo08@gmail.com" }
+]
+dependencies = [
+  "numpy",
+  "pandas",
+  "matplotlib",
+]
 
 [tool.setuptools]
 packages = ["modtran_tud"]
 
 [tool.setuptools.package-data]
-modtran_tud = ["templates/*"]
+"modtran_tud" = ["templates/*"]
