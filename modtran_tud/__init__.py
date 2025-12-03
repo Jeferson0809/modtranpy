@@ -27,7 +27,7 @@ def set_modtran_dir(path: str):
     global MODTRAN_DIR, OUTPUTS_DIR
     MODTRAN_DIR = path
     OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
-
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
 def run_TUD(Tsurf: float,
             h2o_scale: float = 1.0,

@@ -6,8 +6,8 @@ import re
 from io import StringIO
 
 # ===== CONFIGURACIÓN BÁSICA =====
-MODTRAN_DIR   = r"D:\PcModWin5\Bin"
-MODTRAN_EXE   = os.path.join(MODTRAN_DIR, "Mod5.2.1.0.exe")  
+MODTRAN_DIR   = None
+MODTRAN_EXE   = None
 
 OUTPUTS_DIR   = os.path.join(MODTRAN_DIR, "outputs_tape6")
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
@@ -153,20 +153,17 @@ def parse_tape6(path):
 # -------------------------------
 # 4) Simulación UP + DOWN y empaquetado
 # -------------------------------
-def simulate_one(Tsurf, case_name, h2o_scale=1.0, o3_scale=1.0):
-    """
-    Corre dos casos:
-      - UP: tape5_template_up  (sensor arriba, L↑ y T)
-      - DOWN: tape5_template_down (sensor abajo mirando al cielo, L↓)
+def simulate_one(Tsurf, case_name, h2o_scale, o3_scale):
+    global MODTRAN_DIR, OUTPUTS_DIR
 
-    Devuelve un dict con:
-      wavelength,
-      up_microflicks,
-      down_microflicks,
-      transmittance, path_thermal, scat_part, surface_emission, surface_reflected,
-      T_surface, h2o_scale, o3_scale,
-      tp6_up, tp6_down
-    """
+    if MODTRAN_DIR is None:
+        raise RuntimeError(
+            "MODTRAN_DIR is not set. Use set_modtran_dir('path/to/PcModWin5/Bin') before calling run_TUD()."
+        )
+
+    if OUTPUTS_DIR is None:
+        OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
+        os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
     tape5_up = build_tape5("tape5_template_up", Tsurf, h2o_scale, o3_scale)
     tp6_up_path = run_modtran(tape5_up, f"{case_name}_UP")
