@@ -21,10 +21,18 @@ def build_tape5(template_name, Tsurf, h2o_scale=1.0, o3_scale=1.0):
     Carga el template TAPE5 (por nombre de archivo, dentro de MODTRAN_DIR)
     y reemplaza Tsurf, H2O y O3.
     """
-    template_path = os.path.join(MODTRAN_DIR, template_name)
+    import importlib.resources
 
-    with open(template_path, "r", encoding="latin-1", errors="replace") as f:
+    def load_template(template_name):
+        """
+        Carga un template incluido dentro del paquete modtran_tud/templates.
+        """
+        return importlib.resources.files("modtran_tud.templates").joinpath(template_name)
+
+    template_path = load_template(template_name)
+    with open(template_path, "r", encoding="latin-1") as f:
         txt = f.read()
+
 
     txt = txt.replace("TSURF",    f"{Tsurf:.2f}")
     txt = txt.replace("H2O_SCALE", f"{h2o_scale:.3f}")
