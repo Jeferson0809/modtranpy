@@ -1,7 +1,4 @@
-Perfecto, aquí tienes una versión **limpia, minimalista, profesional y sin mencionar Py6S ni ningún otro software externo**.
-Lista para copiar y pegar como tu `README.md`.
 
----
 
 # **MODTRANpy – Thermal TUD Wrapper for MODTRAN 5**
 
