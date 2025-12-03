@@ -15,32 +15,6 @@ The user only provides:
 * Water vapor scale (`h2o_scale`)
 * Ozone scale (`o3_scale`)
 
-
-
----
-
-## **✨ Features**
-
-* High-level function:
-
-  ```python
-  run_TUD(Tsurf, h2o_scale, o3_scale)
-  ```
-* Automatic creation of UP/DOWN TAPE5 files
-* Runs MODTRAN with the provided configuration
-* Extracts wavelength, transmittance, upwelling, downwelling
-* Built-in plotting:
-
-  ```python
-  plot_TUD(result)
-  ```
-* Save/load results as `.npz`
-* No hard-coded paths — the user sets the MODTRAN directory with:
-
-  ```python
-  set_modtran_dir("path/to/PcModWin5/Bin")
-  ```
-
 ---
 
 ## **📂 Installation**
