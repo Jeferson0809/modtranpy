@@ -17,104 +17,51 @@ The user only provides:
 
 ---
 
-## **📂 Installation**
+## 📦 Installation
 
-Clone the repository:
+1. Create any folder on your computer (e.g. `test_modtran/`):
+2. Inside that folder, install the library directly from GitHub:
 
-```bash
-git clone https://github.com/Jeferson0809/modtranpy.git
-cd modtranpy
+```powershell
+pip install git+https://github.com/Jeferson0809/modtranpy.git
 ```
 
-Install in development mode:
-
-```bash
-pip install -e .
-```
-
----
-
-## **⚙️ Requirements**
-
-This package requires a working, licensed local installation of **MODTRAN 5**.
-
-Example location:
-
-```
-C:\PcModWin5\Bin
-```
-
-You must provide this folder when running simulations.
-
----
-
-## **🚀 Quick Start**
-
-### **1. Set the MODTRAN folder**
-
-```python
-from modtran_tud import set_modtran_dir, run_TUD, plot_TUD
-
-set_modtran_dir(r"D:\PcModWin5\Bin")
-```
-
-### **2. Run a simulation**
-
-```python
-res = run_TUD(
-    Tsurf=295,
-    h2o_scale=1.0,
-    o3_scale=1.0
+3. In the same folder, create a Python file (for example test_tud.py):
+   
+```powershell
+from modtran_tud import (
+    run_TUD, set_modtran_dir,
+    save_tud_npz, load_tud_npz,
+    plot_TUD,
 )
+
+# Point to your local MODTRAN 5 installation
+set_modtran_dir(r"C:\PcModWin5\Bin")
+
+# Run a simulation
+res = run_TUD(300.0, 1.0, 1.0)
+
+# Save the result as .npz
+save_tud_npz(res, "T300_H1p0_O1p0.npz")
+
+# Load the saved result (can be on another machine or in Colab)
+res2 = load_tud_npz("T300_H1p0_O1p0.npz")
+
+# Plot the T, U, D curves from the loaded file
+plot_TUD(res2)
+```
+4. Run the script
+```powershell
+python test_tud.py
 ```
 
-### **3. Plot the results**
 
-```python
-plot_TUD(res)
-```
+⚙️ Requirements
 
----
+A local licensed installation of MODTRAN 5
 
-## **💾 Saving & Loading Results (.npz)**
+The directory passed to set_modtran_dir() must contain the MODTRAN executable
 
-### Save:
+Example:
 
-```python
-from modtran_tud.io_utils import save_tud_npz
-
-save_tud_npz("tud_output.npz", res)
-```
-
-### Load:
-
-```python
-from modtran_tud.io_utils import load_tud_npz
-
-res2 = load_tud_npz("tud_output.npz")
-```
-
----
-
-## **📁 Project Structure**
-
-```
-modtran_tud/
-    __init__.py
-    rtm_simple.py
-    plotting.py
-    io_utils.py
-    templates/
-        tape5_template_up
-        tape5_template_down
-```
-
-(No compiled folders such as `.egg-info` are necessary in the repository.)
-
----
-
-## **📜 License**
-
-This repository only contains Python code written by the author.
-Users must provide their own MODTRAN installation under the terms of its license.
-
+C:\PcModWin5\Bin\
