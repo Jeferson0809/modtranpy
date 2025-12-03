@@ -13,8 +13,7 @@ given only three input parameters:
 - Water vapor scaling factor (`h2o_scale`)
 - Ozone scaling factor (`o3_scale`)
 
-The package provides a small, Py6S-style API for running MODTRAN and retrieving
-T/U/D vectors together with the wavelength grid.
+
 
 ---
 
