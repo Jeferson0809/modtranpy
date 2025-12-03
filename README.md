@@ -15,7 +15,7 @@ The user only provides:
 * Water vapor scale (`h2o_scale`)
 * Ozone scale (`o3_scale`)
 
-The library handles template filling, MODTRAN execution, reading TAPE6 files, unit conversion, and optional plotting.
+
 
 ---
 
