@@ -1,6 +1,6 @@
-# modtranpy – MODTRAN TUD Wrapper
+# pymodtran – MODTRAN TUD Wrapper
 
-`modtranpy` is a lightweight Python wrapper for **MODTRAN 5**, designed to
+`pymodtran` is a lightweight Python wrapper for **MODTRAN 5**, designed to
 compute the thermal atmospheric components:
 
 - **T** – Atmospheric transmittance  
