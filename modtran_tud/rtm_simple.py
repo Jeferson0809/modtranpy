@@ -4,15 +4,14 @@ import numpy as np
 import pandas as pd
 import re
 from io import StringIO
+import importlib.resources as resources
 
 # ===== CONFIGURACIÓN BÁSICA =====
-MODTRAN_DIR   = None
-MODTRAN_EXE   = None
+# Estas variables se rellenan desde set_modtran_dir()
+MODTRAN_DIR: str | None = None
+MODTRAN_EXE: str | None = None
+OUTPUTS_DIR: str | None = None
 
-OUTPUTS_DIR   = os.path.join(MODTRAN_DIR, "outputs_tape6")
-os.makedirs(OUTPUTS_DIR, exist_ok=True)
-
-import importlib.resources as resources
 
 def load_template(template_name: str):
     """
@@ -21,6 +20,7 @@ def load_template(template_name: str):
     """
     pkg_root = resources.files("modtran_tud")
     return pkg_root.joinpath("templates", template_name)
+
 
 # -------------------------------
 # 1) Construir TAPE5 desde template
@@ -49,24 +49,40 @@ def run_modtran(tape5_text, out_basename):
 
     Devuelve: ruta completa al .tp6
     """
+    global MODTRAN_DIR, MODTRAN_EXE, OUTPUTS_DIR
+
+    if MODTRAN_DIR is None or MODTRAN_EXE is None:
+        raise RuntimeError(
+            "MODTRAN_DIR/MODTRAN_EXE not set. Llama primero a "
+            "set_modtran_dir('ruta/a/PcModWin5/Bin')."
+        )
+
+    if OUTPUTS_DIR is None:
+        OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
+
+    os.makedirs(OUTPUTS_DIR, exist_ok=True)
+
+    # --- escribir TAPE5 ---
     tape5_path = os.path.join(MODTRAN_DIR, "TAPE5")
     with open(tape5_path, "w", encoding="latin-1", errors="replace") as f:
         f.write(tape5_text)
 
+    # --- limpiar TAPE6 antiguo ---
     tape6_src = os.path.join(MODTRAN_DIR, "TAPE6")
     if os.path.exists(tape6_src):
         os.remove(tape6_src)
 
+    # --- ejecutar MODTRAN ---
     subprocess.run([MODTRAN_EXE], cwd=MODTRAN_DIR, check=True)
 
     if not os.path.exists(tape6_src):
         raise RuntimeError("MODTRAN no generó TAPE6")
 
-    os.makedirs(OUTPUTS_DIR, exist_ok=True)
     tape6_dst = os.path.join(OUTPUTS_DIR, out_basename + ".tp6")
     os.replace(tape6_src, tape6_dst)
 
     return tape6_dst
+
 
 
 # -------------------------------
