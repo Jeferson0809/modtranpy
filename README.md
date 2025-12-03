@@ -1,8 +1,8 @@
 
 
-# **MODTRANpy – Thermal TUD Wrapper for MODTRAN 5**
+# **pymodtran – Thermal TUD Wrapper for MODTRAN 5**
 
-`modtranpy` is a small Python library that automates the generation of atmospheric thermal components using MODTRAN 5.
+`pymodtran` is a small Python library that automates the generation of atmospheric thermal components using MODTRAN 5.
 It produces the three key outputs used in thermal remote sensing:
 
 * **Transmittance** T(λ)
