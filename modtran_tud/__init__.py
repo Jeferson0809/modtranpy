@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
-
+from .plotting import plot_TUD
 from .rtm_simple import simulate_one, MODTRAN_DIR, OUTPUTS_DIR
 
 
@@ -13,8 +13,8 @@ class TUDResult:
     T_surface: float
     h2o_scale: float
     o3_scale: float
-    
-from .plotting import plot_TUD
+
+
 
 __all__ = ["run_TUD", "TUDResult", "set_modtran_dir", "plot_TUD"]
 
