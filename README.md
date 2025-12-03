@@ -22,7 +22,7 @@ The user only provides:
 Clone the repository:
 
 ```bash
-git clone https://github.com/USERNAME/modtranpy.git
+git clone https://github.com/Jeferson0809/modtranpy.git
 cd modtranpy
 ```
 
