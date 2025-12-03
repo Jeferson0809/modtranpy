@@ -12,33 +12,31 @@ MODTRAN_EXE   = os.path.join(MODTRAN_DIR, "Mod5.2.1.0.exe")
 OUTPUTS_DIR   = os.path.join(MODTRAN_DIR, "outputs_tape6")
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
+import importlib.resources as resources
+
+def load_template(template_name: str):
+    """
+    Devuelve la ruta al template incluido en modtran_tud/templates.
+    No requiere que 'templates' sea un paquete Python.
+    """
+    pkg_root = resources.files("modtran_tud")
+    return pkg_root.joinpath("templates", template_name)
 
 # -------------------------------
 # 1) Construir TAPE5 desde template
 # -------------------------------
 def build_tape5(template_name, Tsurf, h2o_scale=1.0, o3_scale=1.0):
-    """
-    Carga el template TAPE5 (por nombre de archivo, dentro de MODTRAN_DIR)
-    y reemplaza Tsurf, H2O y O3.
-    """
-    import importlib.resources
-
-    def load_template(template_name):
-        """
-        Carga un template incluido dentro del paquete modtran_tud/templates.
-        """
-        return importlib.resources.files("modtran_tud.templates").joinpath(template_name)
-
     template_path = load_template(template_name)
-    with open(template_path, "r", encoding="latin-1") as f:
-        txt = f.read()
 
+    with open(template_path, "r", encoding="latin-1", errors="replace") as f:
+        txt = f.read()
 
     txt = txt.replace("TSURF",    f"{Tsurf:.2f}")
     txt = txt.replace("H2O_SCALE", f"{h2o_scale:.3f}")
     txt = txt.replace("O3_SCALE",  f"{o3_scale:.3f}")
 
     return txt
+
 
 
 # -------------------------------
