@@ -86,21 +86,21 @@ def build_tape5(
 
 
 # -------------------------------
-# 2) Ejecutar MODTRAN y guardar TAPE6
+# 2) Run MODTRAN and save TAPE6
 # -------------------------------
 def run_modtran(tape5_text, out_basename):
     """
-    Escribe TAPE5 en MODTRAN_DIR, ejecuta MODTRAN, y mueve el TAPE6 resultante
-    a outputs_tape6/<out_basename>.tp6
+    Write TAPE5 to MODTRAN_DIR, run MODTRAN, and move the resulting TAPE6 to 
+    outputs_tape6/<out_basename>.tp6
 
-    Devuelve: ruta completa al .tp6
+    Returns: full path to .tp6  
     """
     global MODTRAN_DIR, MODTRAN_EXE, OUTPUTS_DIR
 
     if MODTRAN_DIR is None or MODTRAN_EXE is None:
         raise RuntimeError(
-            "MODTRAN_DIR/MODTRAN_EXE not set. Llama primero a "
-            "set_modtran_dir('ruta/a/PcModWin5/Bin')."
+            "MODTRAN_DIR/MODTRAN_EXE not set. Call first "
+            "set_modtran_dir('route/to/PcModWin5/Bin')."
         )
 
     if OUTPUTS_DIR is None:
@@ -108,17 +108,17 @@ def run_modtran(tape5_text, out_basename):
 
     os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
-    # --- escribir TAPE5 ---
+    # --- write TAPE5 ---
     tape5_path = os.path.join(MODTRAN_DIR, "TAPE5")
     with open(tape5_path, "w", encoding="latin-1", errors="replace") as f:
         f.write(tape5_text)
 
-    # --- limpiar TAPE6 antiguo ---
+    # --- clean old TAPE6 ---
     tape6_src = os.path.join(MODTRAN_DIR, "TAPE6")
     if os.path.exists(tape6_src):
         os.remove(tape6_src)
 
-    # --- ejecutar MODTRAN ---
+    # --- run MODTRAN ---
     subprocess.run([MODTRAN_EXE], cwd=MODTRAN_DIR, check=True)
 
     if not os.path.exists(tape6_src):
@@ -136,10 +136,10 @@ def run_modtran(tape5_text, out_basename):
 # -------------------------------
 def parse_tape6(path):
     """
-    Lee TODOS los bloques de
+    Read ALL blocks of
     RADIANCE(WATTS/CM2-STER-XXX)
-    de un TAPE6 y concatena todas las filas numéricas
-    en un único DataFrame.
+    from a TAPE6 and concatenate all numeric rows
+    into a single DataFrame.
     """
 
     with open(path, "r", encoding="latin-1", errors="replace") as f:
@@ -147,7 +147,7 @@ def parse_tape6(path):
 
     m = re.search(r"RADIANCE\(WATTS/CM2-STER-XXX\)", text)
     if not m:
-        raise RuntimeError("No se encontró el encabezado de RADIANCE en el TAPE6")
+        raise RuntimeError("The RADIANCE header was not found on TAPE6")
 
     lines = text[m.end():].splitlines()
 
@@ -165,7 +165,7 @@ def parse_tape6(path):
             data_lines.append(s)
 
     if not data_lines:
-        raise RuntimeError(f"No filas numéricas válidas en {path}")
+        raise RuntimeError(f"No valid numeric rows in {path}")
 
     header = (
         "FREQ WAVELENGTH DIREC "
@@ -213,7 +213,7 @@ def parse_tape6(path):
 
 
 # -------------------------------
-# 4) Simulación UP + DOWN y empaquetado
+# 4) UP + DOWN simulation and packaging
 # -------------------------------
 def simulate_one(
     Tsurf,

@@ -5,16 +5,16 @@ def plot_TUD(res,
              lam_max=13.0,
              figsize=(10, 8)):
     """
-    Figura 3x1:
-      1) Upwelling L↑   [µflick]
-      2) Downwelling L↓ [µflick]
-      3) Transmittance T(λ)
+    Figure 3x1: 
+    1) Upwelling L↑ [µflick] 
+    2) Downwelling L↓ [µflick] 
+    3) Transmittance T(λ) 
 
-    res : TUDResult devuelto por run_TUD.
+    res : TUDResult returned by run_TUD.
     """
     wl = res.wavelength
-    U  = res.upwelling      # ya en microflicks
-    D  = res.downwelling    # ya en microflicks
+    U  = res.upwelling      # microflicks
+    D  = res.downwelling    # microflicks
     T  = res.transmittance  # 0–1
 
     fig, (ax_up, ax_down, ax_T) = plt.subplots(
@@ -41,7 +41,7 @@ def plot_TUD(res,
     ax_T.set_ylim(0, 1)
     ax_T.grid(True, alpha=0.3)
 
-    # Rango espectral
+    # Spectral range
     ax_T.set_xlim(lam_min, lam_max)
 
     plt.tight_layout()
