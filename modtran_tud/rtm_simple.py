@@ -30,56 +30,54 @@ def build_tape5(
     Tsurf,
     h2o_scale=1.0,
     o3_scale=1.0,
-    h1_alt_km=None,
-    h2_alt_km=None,
+    h1=None,
+    h2=None,
     sensor_center=None,
     sensor_width=None,
 ):
+    """
+    Load the TAPE5 template and replace placeholders for:
+    - surface temperature
+    - H2O and O3 scaling
+    - H1 / H2 spectral parameters (optional)
+    - sensor spectral response center / width (optional)
+    """
+
     template_path = load_template(template_name)
 
     with open(template_path, "r", encoding="latin-1", errors="replace") as f:
         txt = f.read()
 
-    # --- Básico ---
+    # Mandatory replacements
     txt = txt.replace("TSURF", f"{Tsurf:.2f}")
     txt = txt.replace("H2O_SCALE", f"{h2o_scale:.3f}")
     txt = txt.replace("O3_SCALE", f"{o3_scale:.3f}")
 
-    # --- Geometría H1/H2: defaults seguros ---
-    if h1_alt_km is None:
-        h1_alt_km = 0.0015   # km (lo que tenías antes)
-    if h2_alt_km is None:
-        h2_alt_km = 6.0      # km
+    # Optional: H1 / H2 (e.g., 6.000000   0.001500)
+    if h1 is not None:
+        txt = txt.replace("H1_VALUE", f"{h1:.6f}")
+    if h2 is not None:
+        txt = txt.replace("H2_VALUE", f"{h2:.6f}")
 
-    if h1_alt_km >= h2_alt_km:
-        raise ValueError("h1_alt_km must be < h2_alt_km")
+    # Optional: sensor spectral center / width
+    if sensor_center is not None:
+        txt = txt.replace("SENSOR_CENTER", f"{sensor_center:.5f}")
 
-    txt = txt.replace("H1_VALUE", f"{h1_alt_km:.6f}")
-    txt = txt.replace("H2_VALUE", f"{h2_alt_km:.6f}")
+    # Apply MINIMUM WIDTH logic
+    if sensor_width is not None:
 
-    # --- Filtro espectral: center / width ---
-    # Valores por defecto = los del TAPE5 original
-    if sensor_center is None:
-        sensor_center = 0.0      # el 0.000000 original
-    if sensor_width is None:
-        sensor_width = 0.001     # el 0.0010000 original
+        MIN_WIDTH = 10.0  # MODTRAN fails below this in thermal mode
 
-    # MODTRAN, en esta config, no acepta widths muy pequeños.
-    # Hemos visto experimentalmente que < 10 hace que explote.
-    MIN_WIDTH_CM1 = 10.0
+        if sensor_width < MIN_WIDTH:
+            print(
+                f"[modtran_tud] WARNING: sensor_width={sensor_width} "
+                f"is too small for MODTRAN. Using {MIN_WIDTH} instead."
+            )
+            width_eff = MIN_WIDTH
+        else:
+            width_eff = sensor_width
 
-    if sensor_width < MIN_WIDTH_CM1:
-        # Puedes dejarlo como print o luego cambiarlo a logging.
-        print(
-            f"[modtran_tud] sensor_width={sensor_width} too small for this "
-            f"configuration; using {MIN_WIDTH_CM1} instead."
-        )
-        sensor_width_eff = MIN_WIDTH_CM1
-    else:
-        sensor_width_eff = sensor_width
-
-    txt = txt.replace("SENSOR_CENTER", f"{sensor_center:.6f}")
-    txt = txt.replace("SENSOR_WIDTH", f"{sensor_width_eff:.6f}")
+        txt = txt.replace("SENSOR_WIDTH", f"{width_eff:.5f}")
 
     return txt
 
