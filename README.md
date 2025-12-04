@@ -32,15 +32,22 @@ pip install git+https://github.com/Jeferson0809/modtranpy.git
 from modtran_tud import (
     run_TUD, set_modtran_dir,
     save_tud_npz, load_tud_npz,
-    plot_TUD,
-)
+    plot_TUD)
 
 # Point to your local MODTRAN 5 installation
 set_modtran_dir(r"C:\PcModWin5\Bin")
 
-# Run a simulation (Tsurf,h2o_scale,o3_scale)
 
-res = run_TUD(300.0, 1.0, 1.0)
+# Run a simulation
+res = run_TUD(
+    Tsurf=300.0,
+    h2o_scale=1.0,
+    o3_scale=1.0,
+    h1=6.0,
+    h2=0.0015,
+    sensor_center=0.0,
+    sensor_width=10.0 #cm-1
+)
 
 # Save the result as .npz
 save_tud_npz(res, "T300_H1p0_O1p0.npz")
@@ -50,6 +57,7 @@ res2 = load_tud_npz("T300_H1p0_O1p0.npz")
 
 # Plot the T, U, D curves from the loaded file
 plot_TUD(res2)
+
 ```
 4. Run the script
 ```powershell
