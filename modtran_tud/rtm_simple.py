@@ -293,4 +293,85 @@ def simulate_one(
         "tp6_down":          tp6_down_path,
     }
     return res
+# -------------------------------
+# 5) Standoff line-of-sight simulation
+# -------------------------------
+def simulate_standoff(
+    Tsurf,
+    case_name,
+    h2o_scale,
+    o3_scale,
+    h1=None,
+    h2=None,
+    sensor_center=None,
+    sensor_width=None,
+    range_km=0.1,
+):
+    """
+    Run a single MODTRAN case for a standoff geometry using
+    'tape5_template_standoff'.
+
+    Parameters
+    ----------
+    Tsurf : float
+        Surface/background temperature used in the model.
+    h2o_scale, o3_scale : float
+        Scaling factors for water vapor and ozone.
+    h1, h2 : float, optional
+        Values written into H1_VALUE and H2_VALUE in the TAPE5 template
+        (e.g. sensor and target heights in km).
+    sensor_center, sensor_width : float, optional
+        Instrument spectral response parameters. For the standoff template
+        they are interpreted in cm^-1 (RW flag).
+    range_km : float, optional
+        Line-of-sight distance in kilometers.
+
+    Returns
+    -------
+    dict
+        Dictionary with wavelength, transmittance and path radiance.
+    """
+    global MODTRAN_DIR, OUTPUTS_DIR
+
+    if MODTRAN_DIR is None:
+        raise RuntimeError(
+            "MODTRAN_DIR is not set. Use set_modtran_dir('path/to/PcModWin5/Bin') "
+            "before calling run_standoff()."
+        )
+
+    if OUTPUTS_DIR is None:
+        OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
+        os.makedirs(OUTPUTS_DIR, exist_ok=True)
+
+    # Build TAPE5 for the standoff configuration
+    tape5_standoff = build_tape5(
+        "tape5_template_standoff",
+        Tsurf,
+        h2o_scale=h2o_scale,
+        o3_scale=o3_scale,
+        h1=h1,
+        h2=h2,
+        sensor_center=sensor_center,
+        sensor_width=sensor_width,
+        range_km=range_km,
+    )
+
+    tp6_path = run_modtran(tape5_standoff, f"{case_name}_STANDOFF")
+    res = parse_tape6(tp6_path)
+
+    # Path radiance (W/(cm²·sr·µm)) -> microflicks
+    path_mf = res["total_radiance"] * 1e6
+
+    return {
+        "wavelength":    res["wavelength"],
+        "transmittance": res["transmittance"],
+        "path_radiance": path_mf,
+        "T_surface":     Tsurf,
+        "h2o_scale":     h2o_scale,
+        "o3_scale":      o3_scale,
+        "h1":            h1,
+        "h2":            h2,
+        "range_km":      range_km,
+        "tp6":           tp6_path,
+    }
 
