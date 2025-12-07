@@ -34,52 +34,42 @@ def build_tape5(
     h2=None,
     sensor_center=None,
     sensor_width=None,
+    range_km=None,          # 👈 muy importante
 ):
-    """
-    Load the TAPE5 template and replace placeholders for:
-    - surface temperature
-    - H2O and O3 scaling
-    - H1 / H2 spectral parameters (optional)
-    - sensor spectral response center / width (optional)
-    """
-
     template_path = load_template(template_name)
 
     with open(template_path, "r", encoding="latin-1", errors="replace") as f:
         txt = f.read()
 
-    # Mandatory replacements
     txt = txt.replace("TSURF", f"{Tsurf:.2f}")
     txt = txt.replace("H2O_SCALE", f"{h2o_scale:.3f}")
     txt = txt.replace("O3_SCALE", f"{o3_scale:.3f}")
 
-    # Optional: H1 / H2 (e.g., 6.000000   0.001500)
     if h1 is not None:
         txt = txt.replace("H1_VALUE", f"{h1:.6f}")
     if h2 is not None:
         txt = txt.replace("H2_VALUE", f"{h2:.6f}")
 
-    # Optional: sensor spectral center / width
+    if range_km is not None:
+        txt = txt.replace("RANGE_KM", f"{range_km:.3f}")
+
     if sensor_center is not None:
         txt = txt.replace("SENSOR_CENTER", f"{sensor_center:.5f}")
 
-    # Apply MINIMUM WIDTH logic
     if sensor_width is not None:
-
-        MIN_WIDTH = 10.0  # MODTRAN fails below this in thermal mode
-
+        MIN_WIDTH = 10.0
         if sensor_width < MIN_WIDTH:
             print(
                 f"[modtran_tud] WARNING: sensor_width={sensor_width} "
-                f"is too small for MODTRAN. Using {MIN_WIDTH} instead."
+                f"is too small for MODTRAN (cm^-1). Using {MIN_WIDTH} instead."
             )
             width_eff = MIN_WIDTH
         else:
             width_eff = sensor_width
-
         txt = txt.replace("SENSOR_WIDTH", f"{width_eff:.5f}")
 
     return txt
+
 
 
 
@@ -305,7 +295,7 @@ def simulate_standoff(
     h2=None,
     sensor_center=None,
     sensor_width=None,
-    range_km=0.1,
+    range_km=None,
 ):
     """
     Run a single MODTRAN case for a standoff geometry using
