@@ -46,3 +46,36 @@ def plot_TUD(res,
 
     plt.tight_layout()
     plt.show()
+    
+def plot_standoff(res,
+                  lam_min=8.0,
+                  lam_max=13.0,
+                  figsize=(10, 6)):
+    """
+    Plot for standoff configuration:
+
+      - path radiance [µflick] on left axis
+      - transmittance T(λ) on right axis
+    """
+    wl = res.wavelength
+    Lp = res.path_radiance      # microflicks along line of sight
+    T  = res.transmittance      # 0–1
+
+    fig, ax_L = plt.subplots(figsize=figsize)
+
+    # --- Path radiance ---
+    ax_L.plot(wl, Lp, linewidth=0.8)
+    ax_L.set_xlabel("Wavelength (µm)")
+    ax_L.set_ylabel("Path Radiance [µflick]")
+    ax_L.grid(True, alpha=0.3)
+
+    # --- Transmittance on secondary axis ---
+    ax_T = ax_L.twinx()
+    ax_T.plot(wl, T, linewidth=0.8)
+    ax_T.set_ylabel("Transmittance T(λ)")
+    ax_T.set_ylim(0, 1)
+
+    ax_L.set_xlim(lam_min, lam_max)
+    plt.title("Standoff path radiance and transmittance")
+    plt.tight_layout()
+    plt.show()
