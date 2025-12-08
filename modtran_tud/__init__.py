@@ -102,42 +102,32 @@ def run_TUD(
 
 def run_standoff(
     Tsurf: float,
+    range_km: float,
     h2o_scale: float = 1.0,
     o3_scale: float = 1.0,
     h1: float | None = None,
     h2: float | None = None,
-    range_km: float = 0.1,
     sensor_center: float | None = None,
     sensor_width: float | None = None,
-) -> StandoffResult:
+):
     """
-    High-level interface for a standoff line-of-sight configuration
-    using 'tape5_template_standoff'.
-
-    Parameters
-    ----------
-    Tsurf : float
-        Surface/background temperature used in the model.
-    h2o_scale, o3_scale : float
-        Scaling factors for water vapor and ozone.
-    h1, h2 : float, optional
-        Heights in km written into H1_VALUE and H2_VALUE.
-    range_km : float, optional
-        Line-of-sight distance in kilometers.
-    sensor_center, sensor_width : float, optional
-        Instrument spectral response in cm^-1 (RW flag).
-
-    Returns
-    -------
-    StandoffResult
+    High-level standoff mode:
+        Adds RANGE_KM to the TAPE5 template.
     """
-    case_name = f"STANDOFF_T{int(Tsurf)}".replace(".", "p")
 
-    sim = simulate_standoff(
+    case_name = (
+        f"ST{int(Tsurf)}_R{range_km:.2f}_H{h2o_scale:.2f}_O{o3_scale:.2f}"
+        .replace(".", "p")
+    )
+
+    from .rtm_simple import build_tape5, run_modtran, parse_tape6
+
+    # Build a standoff tape5 template
+    tape5_txt = build_tape5(
+        "tape5_template_standoff",
         Tsurf,
-        case_name,
-        h2o_scale=h2o_scale,
-        o3_scale=o3_scale,
+        h2o_scale,
+        o3_scale,
         h1=h1,
         h2=h2,
         sensor_center=sensor_center,
@@ -145,14 +135,20 @@ def run_standoff(
         range_km=range_km,
     )
 
-    return StandoffResult(
-        wavelength=sim["wavelength"],
-        transmittance=sim["transmittance"],
-        path_radiance=sim["path_radiance"],
-        T_surface=sim["T_surface"],
-        h2o_scale=sim["h2o_scale"],
-        o3_scale=sim["o3_scale"],
-        h1=sim["h1"],
-        h2=sim["h2"],
-        range_km=sim["range_km"],
+    # Run MODTRAN
+    tp6 = run_modtran(tape5_txt, case_name)
+    res = parse_tape6(tp6)
+
+    # Convert to µflicks
+    up_micro = res["total_radiance"] * 1e6
+
+    return TUDResult(
+        wavelength=res["wavelength"],
+        transmittance=res["transmittance"],
+        upwelling=up_micro,
+        downwelling=None,   # standoff has only one direction
+        T_surface=Tsurf,
+        h2o_scale=h2o_scale,
+        o3_scale=o3_scale,
     )
+

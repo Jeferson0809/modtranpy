@@ -33,39 +33,29 @@ def build_tape5(
     h2=None,
     sensor_center=None,
     sensor_width=None,
-    range_km=None,
+    range_km=None,          # 👈 muy importante
 ):
-    """
-    Replace placeholders in a TAPE5 template:
-      TSURF, H2O_SCALE, O3_SCALE, H1_VALUE, H2_VALUE,
-      SENSOR_CENTER, SENSOR_WIDTH, RANGE_KM.
-    """
     template_path = load_template(template_name)
 
     with open(template_path, "r", encoding="latin-1", errors="replace") as f:
         txt = f.read()
 
-    # Required
     txt = txt.replace("TSURF", f"{Tsurf:.2f}")
     txt = txt.replace("H2O_SCALE", f"{h2o_scale:.3f}")
     txt = txt.replace("O3_SCALE", f"{o3_scale:.3f}")
 
-    # Altitudes
     if h1 is not None:
         txt = txt.replace("H1_VALUE", f"{h1:.6f}")
     if h2 is not None:
         txt = txt.replace("H2_VALUE", f"{h2:.6f}")
 
-    # Standoff range
     if range_km is not None:
         txt = txt.replace("RANGE_KM", f"{range_km:.3f}")
 
-    # Sensor spectral response
     if sensor_center is not None:
         txt = txt.replace("SENSOR_CENTER", f"{sensor_center:.5f}")
 
     if sensor_width is not None:
-        # MODTRAN needs FWHM >= ~10 cm^-1 (manual recommendation)
         MIN_WIDTH = 10.0
         if sensor_width < MIN_WIDTH:
             print(
@@ -78,6 +68,7 @@ def build_tape5(
         txt = txt.replace("SENSOR_WIDTH", f"{width_eff:.5f}")
 
     return txt
+
 
 
 # -------------------------------
