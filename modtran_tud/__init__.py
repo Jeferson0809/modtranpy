@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .plotting import plot_TUD, plot_standoff
-from .rtm_simple import simulate_one, simulate_standoff
+from .rtm_simple import simulate_one, simulate_standoff, simulate_standoff_TUD
 from .io_utils import (
     save_tud_npz,
     load_tud_npz,
@@ -42,6 +42,7 @@ class StandoffResult:
 
 __all__ = [
     "run_TUD",
+    "run_standoff_TUD",
     "TUDResult",
     "run_standoff",
     "StandoffResult",
@@ -152,4 +153,41 @@ def run_standoff(
         h1=sim["h1"],
         h2=sim["h2"],
         range_km=sim["range_km"],
+    )
+def run_standoff_TUD(
+    Tsurf: float,
+    h2o_scale: float = 1.0,
+    o3_scale: float = 1.0,
+    h1: float | None = None,
+    h2: float | None = None,
+    range_km: float = 0.1,
+    sensor_center: float | None = None,
+    sensor_width: float | None = None,
+) -> TUDResult:
+    """
+    TUD en geometría standoff:
+      - T_LOS(λ), upwelling de camino U_path(λ), downwelling hemisférico D(λ).
+    """
+    case_name = f"STANDOFF_T{int(Tsurf)}".replace(".", "p")
+
+    sim = simulate_standoff_TUD(
+        Tsurf,
+        case_name,
+        h2o_scale=h2o_scale,
+        o3_scale=o3_scale,
+        h1=h1,
+        h2=h2,
+        sensor_center=sensor_center,
+        sensor_width=sensor_width,
+        range_km=range_km,
+    )
+
+    return TUDResult(
+        wavelength=sim["wavelength"],
+        transmittance=sim["transmittance"],
+        upwelling=sim["up_microflicks"],
+        downwelling=sim["down_microflicks"],
+        T_surface=sim["T_surface"],
+        h2o_scale=sim["h2o_scale"],
+        o3_scale=sim["o3_scale"],
     )

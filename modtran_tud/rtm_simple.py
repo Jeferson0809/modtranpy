@@ -360,3 +360,87 @@ def simulate_standoff(
         "range_km":      range_km,
         "tp6":           tp6_path,
     }
+def simulate_standoff_TUD(
+    Tsurf,
+    case_name,
+    h2o_scale,
+    o3_scale,
+    h1=None,
+    h2=None,
+    sensor_center=None,
+    sensor_width=None,
+    range_km=0.1,
+):
+    """
+    Standoff TUD siguiendo el párrafo:
+
+      - Caso A (tape5_template_standoff):
+          suelo frío (~0 K) + reflectancia 0
+          => T_LOS(λ) + radiancia de camino U_path(λ)
+
+      - Caso B (tape5_template_standoff_D):
+          reflectancia del suelo = 1, sensor justo sobre el suelo mirando hacia arriba
+          => D_hemi(λ) (downwelling hemisférico)
+    """
+    global MODTRAN_DIR, OUTPUTS_DIR
+
+    if MODTRAN_DIR is None:
+        raise RuntimeError(
+            "MODTRAN_DIR is not set. Use set_modtran_dir('path/to/PcModWin5/Bin') "
+            "before calling run_standoff_TUD()."
+        )
+
+    if OUTPUTS_DIR is None:
+        OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
+        os.makedirs(OUTPUTS_DIR, exist_ok=True)
+
+    # ----- CASO A: STANDOFF HORIZONTAL, SUELO FRÍO + R=0 -----
+    tape5_TU = build_tape5(
+        "tape5_template_standoff",   # 👈 tu plantilla horizontal
+        Tsurf,
+        h2o_scale=h2o_scale,
+        o3_scale=o3_scale,
+        h1=h1,
+        h2=h2,
+        sensor_center=sensor_center,
+        sensor_width=sensor_width,
+        range_km=range_km,
+    )
+    tp6_TU_path = run_modtran(tape5_TU, f"{case_name}_STAND_TU")
+    res_TU = parse_tape6(tp6_TU_path)
+
+    lam    = res_TU["wavelength"]
+    T_los  = res_TU["transmittance"]
+    U_path = res_TU["total_radiance"] * 1e6   # microflicks
+
+    # ----- CASO B: DOWNWELLING HEMISFÉRICO -----
+    tape5_D = build_tape5(
+        "tape5_template_standoff_D",  # 👈 tu plantilla “D”
+        Tsurf,
+        h2o_scale=h2o_scale,
+        o3_scale=o3_scale,
+        h1=h1,
+        h2=h2,
+        sensor_center=sensor_center,
+        sensor_width=sensor_width,
+        # range_km no se usa en esta geometría; no hace falta pasarlo
+    )
+    tp6_D_path = run_modtran(tape5_D, f"{case_name}_STAND_D")
+    res_D = parse_tape6(tp6_D_path)
+
+    D_hemi = res_D["total_radiance"] * 1e6    # microflicks
+
+    return {
+        "wavelength":      lam,
+        "transmittance":   T_los,
+        "up_microflicks":  U_path,
+        "down_microflicks": D_hemi,
+        "T_surface":       Tsurf,
+        "h2o_scale":       h2o_scale,
+        "o3_scale":        o3_scale,
+        "h1":              h1,
+        "h2":              h2,
+        "range_km":        range_km,
+        "tp6_stand_TU":    tp6_TU_path,
+        "tp6_stand_D":     tp6_D_path,
+    }
