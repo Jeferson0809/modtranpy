@@ -289,7 +289,7 @@ def simulate_one(
 
 
 # -------------------------------
-# 5) Pure standoff path (horizontal LOS)
+# 5) Standoff line-of-sight simulation
 # -------------------------------
 def simulate_standoff(
     Tsurf,
@@ -300,13 +300,31 @@ def simulate_standoff(
     h2=None,
     sensor_center=None,
     sensor_width=None,
-    range_km=None,
+    range_km=0.1,
 ):
     """
-    Single MODTRAN run for horizontal standoff geometry using
+    Run a single MODTRAN case for a standoff geometry using
     'tape5_template_standoff'.
 
-    Returns line-of-sight transmittance and path radiance.
+    Parameters
+    ----------
+    Tsurf : float
+        Surface/background temperature used in the model.
+    h2o_scale, o3_scale : float
+        Scaling factors for water vapor and ozone.
+    h1, h2 : float, optional
+        Values written into H1_VALUE and H2_VALUE in the TAPE5 template
+        (e.g. sensor and target heights in km).
+    sensor_center, sensor_width : float, optional
+        Instrument spectral response parameters. For the standoff template
+        they are interpreted in cm^-1 (RW flag).
+    range_km : float, optional
+        Line-of-sight distance in kilometers.
+
+    Returns
+    -------
+    dict
+        Dictionary with wavelength, transmittance and path radiance.
     """
     global MODTRAN_DIR, OUTPUTS_DIR
 
@@ -320,6 +338,7 @@ def simulate_standoff(
         OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
         os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
+    # Build TAPE5 for the standoff configuration
     tape5_standoff = build_tape5(
         "tape5_template_standoff",
         Tsurf,
@@ -332,9 +351,10 @@ def simulate_standoff(
         range_km=range_km,
     )
 
-    tp6_path = run_modtran(tape5_standoff, f"{case_name}_STAND")
+    tp6_path = run_modtran(tape5_standoff, f"{case_name}_STANDOFF")
     res = parse_tape6(tp6_path)
 
+    # Path radiance (W/(cm²·sr·µm)) -> microflicks
     path_mf = res["total_radiance"] * 1e6
 
     return {
@@ -348,79 +368,4 @@ def simulate_standoff(
         "h2":            h2,
         "range_km":      range_km,
         "tp6":           tp6_path,
-    }
-
-
-# -------------------------------
-# 6) Standoff TUD (U_path + D_hemi + T_LOS)
-# -------------------------------
-def simulate_standoff_TUD(
-    Tsurf: float,
-    case_name: str,
-    h2o_scale: float,
-    o3_scale: float,
-    h1: float | None = None,
-    h2: float | None = None,
-    sensor_center: float | None = None,
-    sensor_width: float | None = None,
-    range_km: float = 1.0,
-):
-    """
-    Standoff TUD simulation (horizontal path):
-
-      1) STANDOFF CASE (tape5_template_standoff)
-         -> T_LOS(λ) and U_path(λ) = path radiance (upwelling-equivalent)
-
-      2) DOWN CASE (tape5_template_down, same as nadir TUD)
-         -> hemispheric downwelling D(λ) at the ground
-
-    The combination (T_LOS, U_path, D) can be used to train TES models with
-    standoff geometry.
-    """
-    # ---- 1) standoff LOS ----
-    stand = simulate_standoff(
-        Tsurf,
-        case_name,
-        h2o_scale=h2o_scale,
-        o3_scale=o3_scale,
-        h1=h1,
-        h2=h2,
-        sensor_center=sensor_center,
-        sensor_width=sensor_width,
-        range_km=range_km,
-    )
-
-    lam = stand["wavelength"]
-    T_los = stand["transmittance"]
-    U_path = stand["path_radiance"]
-
-    # ---- 2) hemispheric downwelling (reuse existing DOWN template) ----
-    # Use the same call as in simulate_one but only keep the DOWN result.
-    tape5_down = build_tape5(
-        "tape5_template_down",
-        Tsurf,
-        h2o_scale=h2o_scale,
-        o3_scale=o3_scale,
-        h1=h1,
-        h2=h2,
-        sensor_center=sensor_center,
-        sensor_width=sensor_width,
-    )
-    tp6_down_path = run_modtran(tape5_down, f"{case_name}_DOWN")
-    res_down = parse_tape6(tp6_down_path)
-    D_hemi = res_down["total_radiance"] * 1e6
-
-    return {
-        "wavelength": lam,
-        "transmittance": T_los,
-        "up_microflicks": U_path,
-        "down_microflicks": D_hemi,
-        "T_surface": Tsurf,
-        "h2o_scale": h2o_scale,
-        "o3_scale": o3_scale,
-        "h1": h1,
-        "h2": h2,
-        "range_km": range_km,
-        "tp6_standoff": stand["tp6"],
-        "tp6_down": tp6_down_path,
     }

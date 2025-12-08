@@ -44,13 +44,12 @@ def save_standoff_npz(result, path: str) -> None:
         path,
         wavelength=result.wavelength,
         transmittance=result.transmittance,
-        upwelling=result.upwelling,
-        downwelling=result.downwelling,
+        path_radiance=result.path_radiance,
         T_surface=result.T_surface,
         h2o_scale=result.h2o_scale,
         o3_scale=result.o3_scale,
-        h1=result.h1,
-        h2=result.h2,
+        h1=result.h1 if result.h1 is not None else np.nan,
+        h2=result.h2 if result.h2 is not None else np.nan,
         range_km=result.range_km,
     )
 
@@ -60,18 +59,19 @@ def load_standoff_npz(path: str):
     Load a StandoffResult object from a .npz file previously saved
     with save_standoff_npz.
     """
-    from . import StandoffResult
-
+    from . import StandoffResult  # local import to avoid circular import
     data = np.load(path)
+    h1 = float(data["h1"])
+    h2 = float(data["h2"])
     return StandoffResult(
         wavelength=data["wavelength"],
         transmittance=data["transmittance"],
-        upwelling=data["upwelling"],
-        downwelling=data["downwelling"],
+        path_radiance=data["path_radiance"],
         T_surface=float(data["T_surface"]),
         h2o_scale=float(data["h2o_scale"]),
         o3_scale=float(data["o3_scale"]),
-        h1=float(data["h1"]),
-        h2=float(data["h2"]),
+        h1=None if np.isnan(h1) else h1,
+        h2=None if np.isnan(h2) else h2,
         range_km=float(data["range_km"]),
     )
+

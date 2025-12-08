@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 import numpy as np
 
-from .plotting import plot_TUD, plot_standoff
-from .rtm_simple import simulate_one, simulate_standoff_TUD
+from .plotting import plot_TUD
+from .rtm_simple import simulate_one, simulate_standoff
 from .io_utils import (
     save_tud_npz,
     load_tud_npz,
@@ -26,8 +26,7 @@ class TUDResult:
 class StandoffResult:
     wavelength: np.ndarray
     transmittance: np.ndarray
-    upwelling: np.ndarray        # path radiance (µflick)
-    downwelling: np.ndarray      # hemispheric downwelling (µflick)
+    path_radiance: np.ndarray  # microflicks along line of sight
     T_surface: float
     h2o_scale: float
     o3_scale: float
@@ -43,7 +42,6 @@ __all__ = [
     "StandoffResult",
     "set_modtran_dir",
     "plot_TUD",
-    "plot_standoff",
     "save_tud_npz",
     "load_tud_npz",
     "save_standoff_npz",
@@ -74,8 +72,7 @@ def run_TUD(
     sensor_width: float | None = None,
 ) -> TUDResult:
     """
-    High-level interface for nadir TUD simulation:
-
+    High-level interface for up/down TUD simulation:
         (Tsurf, h2o_scale, o3_scale, [h1, h2, sensor_center, sensor_width])
         -> TUDResult (T, U, D + wavelength).
     """
@@ -109,20 +106,34 @@ def run_standoff(
     o3_scale: float = 1.0,
     h1: float | None = None,
     h2: float | None = None,
-    range_km: float = 1.0,
+    range_km: float = 0.1,
     sensor_center: float | None = None,
     sensor_width: float | None = None,
 ) -> StandoffResult:
     """
-    High-level interface for horizontal standoff TUD:
+    High-level interface for a standoff line-of-sight configuration
+    using 'tape5_template_standoff'.
 
-      - transmittance(λ): line-of-sight transmittance T_LOS
-      - upwelling(λ):     atmospheric path radiance along the LOS (µflick)
-      - downwelling(λ):   hemispheric downwelling at the ground (µflick)
+    Parameters
+    ----------
+    Tsurf : float
+        Surface/background temperature used in the model.
+    h2o_scale, o3_scale : float
+        Scaling factors for water vapor and ozone.
+    h1, h2 : float, optional
+        Heights in km written into H1_VALUE and H2_VALUE.
+    range_km : float, optional
+        Line-of-sight distance in kilometers.
+    sensor_center, sensor_width : float, optional
+        Instrument spectral response in cm^-1 (RW flag).
+
+    Returns
+    -------
+    StandoffResult
     """
     case_name = f"STANDOFF_T{int(Tsurf)}".replace(".", "p")
 
-    sim = simulate_standoff_TUD(
+    sim = simulate_standoff(
         Tsurf,
         case_name,
         h2o_scale=h2o_scale,
@@ -137,8 +148,7 @@ def run_standoff(
     return StandoffResult(
         wavelength=sim["wavelength"],
         transmittance=sim["transmittance"],
-        upwelling=sim["up_microflicks"],
-        downwelling=sim["down_microflicks"],
+        path_radiance=sim["path_radiance"],
         T_surface=sim["T_surface"],
         h2o_scale=sim["h2o_scale"],
         o3_scale=sim["o3_scale"],
