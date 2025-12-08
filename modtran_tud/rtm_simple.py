@@ -381,26 +381,43 @@ def simulate_standoff_TUD(
     case_name: str,
     h2o_scale: float,
     o3_scale: float,
+    h1: float | None = None,
+    h2: float | None = None,
     sensor_center: float | None = None,
     sensor_width: float | None = None,
     range_km: float = 1.0,
-    sensor_height_km: float = 0.0015,   # 1.5 m
 ):
     """
-    Standoff TUD:
-      - U_path(λ): radiancia atmosférica horizontal
-      - T_los(λ) : transmitancia horizontal
-      - D(λ): radiancia hemisférica downwelling
+    Standoff TUD simulation in two steps:
+
+      1) STANDOFF case (horizontal LOS, `tape5_template_standoff`)
+         -> T_LOS(λ) and atmospheric path radiance (Upwelling-equivalent).
+
+      2) DOWN case (`tape5_template_down`)
+         -> hemispheric downwelling D(λ) at the ground.
+
+    Notes:
+      * For a "pure" atmospheric TUD as in the paper, the standoff
+        template should use a very cold, black ground (T ~ 0 K,
+        reflectance ~ 0), and the DOWN template a perfectly reflective
+        ground (reflectance = 1).
     """
+    global MODTRAN_DIR, OUTPUTS_DIR
 
-    # MODTRAN exige H1ALT == H2ALT en CASE 1
-    h1 = sensor_height_km
-    h2 = sensor_height_km
+    if MODTRAN_DIR is None:
+        raise RuntimeError(
+            "MODTRAN_DIR is not set. Use set_modtran_dir('path/to/PcModWin5/Bin') "
+            "before calling run_standoff()."
+        )
 
-    # ---- 1) Horizontal standoff (ground ~0 K, reflectancia = 0) ----
+    if OUTPUTS_DIR is None:
+        OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
+        os.makedirs(OUTPUTS_DIR, exist_ok=True)
+
+    # ---- 1) STANDOFF CASE: horizontal path
     tape5_stand = build_tape5(
         "tape5_template_standoff",
-        Tsurf=1.0,                # casi 0 K para eliminar radiancia del suelo
+        Tsurf,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
         h1=h1,
@@ -409,27 +426,28 @@ def simulate_standoff_TUD(
         sensor_width=sensor_width,
         range_km=range_km,
     )
-
-    tp6_stand = run_modtran(tape5_stand, f"{case_name}_STAND")
-    res_stand = parse_tape6(tp6_stand)
+    tp6_stand_path = run_modtran(tape5_stand, f"{case_name}_STAND")
+    res_stand = parse_tape6(tp6_stand_path)
 
     lam = res_stand["wavelength"]
     T_los = res_stand["transmittance"]
-    U_path = res_stand["total_radiance"] * 1e6
+    U_path = res_stand["total_radiance"] * 1e6  # microflicks
 
-    # ---- 2) Downwelling hemisférica ----
+    # ---- 2) DOWN CASE: hemispheric downwelling at ground
     tape5_down = build_tape5(
         "tape5_template_down",
-        Tsurf=Tsurf,
+        Tsurf,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
+        h1=h1,
+        h2=h2,
         sensor_center=sensor_center,
         sensor_width=sensor_width,
     )
+    tp6_down_path = run_modtran(tape5_down, f"{case_name}_DOWN")
+    res_down = parse_tape6(tp6_down_path)
 
-    tp6_down = run_modtran(tape5_down, f"{case_name}_DOWN")
-    res_down = parse_tape6(tp6_down)
-    D_hemi = res_down["total_radiance"] * 1e6
+    D_hemi = res_down["total_radiance"] * 1e6  # microflicks
 
     return {
         "wavelength": lam,
@@ -442,7 +460,6 @@ def simulate_standoff_TUD(
         "h1": h1,
         "h2": h2,
         "range_km": range_km,
-        "tp6_standoff": tp6_stand,
-        "tp6_down": tp6_down,
+        "tp6_standoff": tp6_stand_path,
+        "tp6_down": tp6_down_path,
     }
-
