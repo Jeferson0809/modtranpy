@@ -365,3 +365,83 @@ def simulate_standoff(
         "tp6":           tp6_path,
     }
 
+def simulate_standoff_TUD(
+    Tsurf: float,
+    case_name: str,
+    h2o_scale: float,
+    o3_scale: float,
+    h1: float | None = None,
+    h2: float | None = None,
+    sensor_center: float | None = None,
+    sensor_width: float | None = None,
+    range_km: float = 1.0,
+):
+    """
+    Standoff TUD simulation:
+      - STANDOFF case (horizontal path):  T_LOS(λ) and path radiance (Upwelling-equivalent)
+      - DOWN case (up-looking at ground): hemispheric downwelling D(λ)
+
+    Returns a dict that contains wavelength, transmittance, up/down radiances
+    and bookkeeping parameters.
+    """
+    global MODTRAN_DIR, OUTPUTS_DIR
+
+    if MODTRAN_DIR is None:
+        raise RuntimeError(
+            "MODTRAN_DIR is not set. Use set_modtran_dir('path/to/PcModWin5/Bin') "
+            "before calling run_standoff()."
+        )
+
+    if OUTPUTS_DIR is None:
+        OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
+        os.makedirs(OUTPUTS_DIR, exist_ok=True)
+
+    # ---- 1) STANDOFF CASE: horizontal path, get T_LOS and path radiance ----
+    tape5_stand = build_tape5(
+        "tape5_template_standoff",
+        Tsurf,
+        h2o_scale=h2o_scale,
+        o3_scale=o3_scale,
+        h1=h1,
+        h2=h2,
+        sensor_center=sensor_center,
+        sensor_width=sensor_width,
+        range_km=range_km,
+    )
+    tp6_stand_path = run_modtran(tape5_stand, f"{case_name}_STAND")
+    res_stand = parse_tape6(tp6_stand_path)
+
+    lam = res_stand["wavelength"]
+    T_los = res_stand["transmittance"]            # 0–1 along the line of sight
+    U_path = res_stand["total_radiance"] * 1e6    # microflicks
+
+    # ---- 2) DOWN CASE: hemispheric downwelling at the ground ----
+    tape5_down = build_tape5(
+        "tape5_template_down",
+        Tsurf,
+        h2o_scale=h2o_scale,
+        o3_scale=o3_scale,
+        h1=h1,
+        h2=h2,
+        sensor_center=sensor_center,
+        sensor_width=sensor_width,
+    )
+    tp6_down_path = run_modtran(tape5_down, f"{case_name}_DOWN")
+    res_down = parse_tape6(tp6_down_path)
+
+    D_hemi = res_down["total_radiance"] * 1e6     # microflicks
+
+    return {
+        "wavelength": lam,
+        "transmittance": T_los,
+        "up_microflicks": U_path,
+        "down_microflicks": D_hemi,
+        "T_surface": Tsurf,
+        "h2o_scale": h2o_scale,
+        "o3_scale": o3_scale,
+        "h1": h1,
+        "h2": h2,
+        "range_km": range_km,
+        "tp6_standoff": tp6_stand_path,
+        "tp6_down": tp6_down_path,
+    }
