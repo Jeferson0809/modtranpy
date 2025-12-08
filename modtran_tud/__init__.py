@@ -25,9 +25,9 @@ class TUDResult:
 @dataclass
 class StandoffResult:
     wavelength: np.ndarray
-    transmittance: np.ndarray        # T_LOS(λ)
-    upwelling: np.ndarray            # path radiance (µflick)
-    downwelling: np.ndarray          # hemispheric downwelling (µflick)
+    transmittance: np.ndarray
+    upwelling: np.ndarray        # path radiance (µflick)
+    downwelling: np.ndarray      # hemispheric downwelling (µflick)
     T_surface: float
     h2o_scale: float
     o3_scale: float
@@ -53,8 +53,7 @@ __all__ = [
 
 def set_modtran_dir(path: str):
     """
-    Configure the MODTRAN directory (PcModWin5/Bin). This must be
-    called once before running run_TUD or run_standoff.
+    Configure the MODTRAN directory (PcModWin5/Bin).
     """
     import os
     from . import rtm_simple
@@ -75,7 +74,7 @@ def run_TUD(
     sensor_width: float | None = None,
 ) -> TUDResult:
     """
-    High-level interface for nadir-style TUD (UP + DOWN).
+    High-level interface for nadir TUD simulation:
 
         (Tsurf, h2o_scale, o3_scale, [h1, h2, sensor_center, sensor_width])
         -> TUDResult (T, U, D + wavelength).
@@ -117,11 +116,9 @@ def run_standoff(
     """
     High-level interface for horizontal standoff TUD:
 
-      - T_LOS(λ): line-of-sight transmittance
-      - Upwelling(λ): atmospheric path radiance along the LOS
-      - Downwelling(λ): hemispheric downwelling at the ground
-
-    Radiances are returned in microflicks (µW / cm^2 / sr / µm).
+      - transmittance(λ): line-of-sight transmittance T_LOS
+      - upwelling(λ):     atmospheric path radiance along the LOS (µflick)
+      - downwelling(λ):   hemispheric downwelling at the ground (µflick)
     """
     case_name = f"STANDOFF_T{int(Tsurf)}".replace(".", "p")
 

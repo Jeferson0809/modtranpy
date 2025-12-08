@@ -6,8 +6,8 @@ import re
 from io import StringIO
 import importlib.resources as resources
 
-# ===== BASIC MODTRAN CONFIGURATION =====
-# These globals are set from set_modtran_dir() in __init__.py
+# ===== BASIC CONFIGURATION =====
+# These variables are filled by set_modtran_dir() from __init__.py
 MODTRAN_DIR: str | None = None
 MODTRAN_EXE: str | None = None
 OUTPUTS_DIR: str | None = None
@@ -15,17 +15,14 @@ OUTPUTS_DIR: str | None = None
 
 def load_template(template_name: str):
     """
-    Return the path to a TAPE5 template stored in
-    modtran_tud/templates.
-
-    This does NOT require "templates" to be a Python package.
+    Return the path of a TAPE5 template stored in modtran_tud/templates.
     """
     pkg_root = resources.files("modtran_tud")
     return pkg_root.joinpath("templates", template_name)
 
 
 # -------------------------------
-# 1) Build TAPE5 from template
+# 1) Build TAPE5 from a template
 # -------------------------------
 def build_tape5(
     template_name,
@@ -39,31 +36,21 @@ def build_tape5(
     range_km=None,
 ):
     """
-    Load a TAPE5 template and replace placeholders:
-
-      TSURF        -> surface temperature (K)
-      H2O_SCALE    -> water vapour scale
-      O3_SCALE     -> ozone scale
-      H1_VALUE     -> H1 (km), if provided
-      H2_VALUE     -> H2 (km), if provided
-      RANGE_KM     -> standoff path length (km), if provided
-      SENSOR_CENTER-> central wavenumber of the band (cm^-1), if provided
-      SENSOR_WIDTH -> slit FWHM in cm^-1 (clamped to >= 10 cm^-1)
-
-    The exact interpretation of these values depends on the template
-    (nadir TUD, standoff, downwelling, etc.).
+    Replace placeholders in a TAPE5 template:
+      TSURF, H2O_SCALE, O3_SCALE, H1_VALUE, H2_VALUE,
+      SENSOR_CENTER, SENSOR_WIDTH, RANGE_KM.
     """
     template_path = load_template(template_name)
 
     with open(template_path, "r", encoding="latin-1", errors="replace") as f:
         txt = f.read()
 
-    # Required scalars
+    # Required
     txt = txt.replace("TSURF", f"{Tsurf:.2f}")
     txt = txt.replace("H2O_SCALE", f"{h2o_scale:.3f}")
     txt = txt.replace("O3_SCALE", f"{o3_scale:.3f}")
 
-    # Heights
+    # Altitudes
     if h1 is not None:
         txt = txt.replace("H1_VALUE", f"{h1:.6f}")
     if h2 is not None:
@@ -73,12 +60,12 @@ def build_tape5(
     if range_km is not None:
         txt = txt.replace("RANGE_KM", f"{range_km:.3f}")
 
-    # Spectral response
+    # Sensor spectral response
     if sensor_center is not None:
         txt = txt.replace("SENSOR_CENTER", f"{sensor_center:.5f}")
 
     if sensor_width is not None:
-        # MODTRAN manual recommends FWHM >= 10 cm^-1 when using band model.
+        # MODTRAN needs FWHM >= ~10 cm^-1 (manual recommendation)
         MIN_WIDTH = 10.0
         if sensor_width < MIN_WIDTH:
             print(
@@ -99,19 +86,19 @@ def build_tape5(
 def run_modtran(tape5_text, out_basename):
     """
     Write TAPE5 to MODTRAN_DIR, run MODTRAN, and move the resulting TAPE6 to
-    outputs_tape6/<out_basename>.tp6
+        outputs_tape6/<out_basename>.tp6
 
     Returns
     -------
     str
-        Full path to the generated .tp6 file.
+        Full path to the .tp6 file.
     """
     global MODTRAN_DIR, MODTRAN_EXE, OUTPUTS_DIR
 
     if MODTRAN_DIR is None or MODTRAN_EXE is None:
         raise RuntimeError(
-            "MODTRAN_DIR/MODTRAN_EXE not set. Call first "
-            "set_modtran_dir('path/to/PcModWin5/Bin')."
+            "MODTRAN_DIR/MODTRAN_EXE not set. Call "
+            "set_modtran_dir('path/to/PcModWin5/Bin') first."
         )
 
     if OUTPUTS_DIR is None:
@@ -119,21 +106,21 @@ def run_modtran(tape5_text, out_basename):
 
     os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
-    # Write TAPE5
+    # --- write TAPE5 ---
     tape5_path = os.path.join(MODTRAN_DIR, "TAPE5")
     with open(tape5_path, "w", encoding="latin-1", errors="replace") as f:
         f.write(tape5_text)
 
-    # Remove old TAPE6 if present
+    # --- clean old TAPE6 ---
     tape6_src = os.path.join(MODTRAN_DIR, "TAPE6")
     if os.path.exists(tape6_src):
         os.remove(tape6_src)
 
-    # Run MODTRAN
+    # --- run MODTRAN ---
     subprocess.run([MODTRAN_EXE], cwd=MODTRAN_DIR, check=True)
 
     if not os.path.exists(tape6_src):
-        raise RuntimeError("MODTRAN did not generate TAPE6")
+        raise RuntimeError("MODTRAN did not produce TAPE6 (check errors in GUI).")
 
     tape6_dst = os.path.join(OUTPUTS_DIR, out_basename + ".tp6")
     os.replace(tape6_src, tape6_dst)
@@ -142,19 +129,16 @@ def run_modtran(tape5_text, out_basename):
 
 
 # -------------------------------
-# 3) Parse TAPE6 (RADIANCE block)
+# 3) Parse a TAPE6 (RADIANCE block)
 # -------------------------------
 def parse_tape6(path):
     """
-    Read ALL blocks of
+    Read all blocks of
 
         RADIANCE(WATTS/CM2-STER-XXX)
 
-    from a TAPE6 file and concatenate all numeric rows into a single
-    pandas DataFrame. Returns a dict with the main fields plus the
-    full DataFrame in "raw".
+    from a TAPE6 and concatenate all numeric rows into a single DataFrame.
     """
-
     with open(path, "r", encoding="latin-1", errors="replace") as f:
         text = f.read()
 
@@ -163,7 +147,6 @@ def parse_tape6(path):
         raise RuntimeError("The RADIANCE header was not found on TAPE6")
 
     lines = text[m.end():].splitlines()
-
     data_lines = []
 
     for line in lines:
@@ -198,15 +181,12 @@ def parse_tape6(path):
 
     freq          = df["FREQ"].values
     wavelength_um = df["WAVELENGTH"].values
-
     path_th_um    = df["PATH_TH_UM"].values
     scat_part     = df["SCAT_PART"].values
-
     surf_em_um    = df["SURF_EM_UM"].values
     surf_ref_um   = df["SURF_REF_UM"].values
     total_rad_cm  = df["TOTAL_RAD_CM"].values
     total_rad_um  = df["TOTAL_RAD_UM"].values
-
     integral      = df["INTEGRAL"].values
     trans         = df["TOTAL"].values
 
@@ -226,7 +206,7 @@ def parse_tape6(path):
 
 
 # -------------------------------
-# 4) Nadir-style UP + DOWN TUD
+# 4) Nadir TUD (UP + DOWN) – already working
 # -------------------------------
 def simulate_one(
     Tsurf,
@@ -239,14 +219,14 @@ def simulate_one(
     sensor_width=None,
 ):
     """
-    Classic two-case TUD for nadir / limb:
+    Run two MODTRAN cases in nadir geometry:
 
-      - UP case:   sensor looking down to the surface
-                   -> upwelling + transmittance
-      - DOWN case: sensor looking up to the sky
-                   -> hemispheric downwelling
+      - UP:   atmospheric transmission + upwelling radiance
+      - DOWN: hemispheric downwelling radiance
 
-    Extra parameters are written into the TAPE5 templates via placeholders.
+    This uses the existing templates:
+      - tape5_template_up
+      - tape5_template_down
     """
     global MODTRAN_DIR, OUTPUTS_DIR
 
@@ -291,7 +271,7 @@ def simulate_one(
     up_micro = res_up["total_radiance"] * 1e6
     down_micro = res_down["total_radiance"] * 1e6
 
-    res = {
+    return {
         "wavelength":        res_up["wavelength"],
         "up_microflicks":    up_micro,
         "down_microflicks":  down_micro,
@@ -306,11 +286,10 @@ def simulate_one(
         "tp6_up":            tp6_up_path,
         "tp6_down":          tp6_down_path,
     }
-    return res
 
 
 # -------------------------------
-# 5) Simple standoff line-of-sight
+# 5) Pure standoff path (horizontal LOS)
 # -------------------------------
 def simulate_standoff(
     Tsurf,
@@ -324,11 +303,10 @@ def simulate_standoff(
     range_km=None,
 ):
     """
-    Single MODTRAN run for a standoff LOS using `tape5_template_standoff`.
+    Single MODTRAN run for horizontal standoff geometry using
+    'tape5_template_standoff'.
 
-    This gives:
-      - T_LOS(λ)  as "transmittance"
-      - path radiance along LOS as "path_radiance" (microflicks)
+    Returns line-of-sight transmittance and path radiance.
     """
     global MODTRAN_DIR, OUTPUTS_DIR
 
@@ -354,7 +332,7 @@ def simulate_standoff(
         range_km=range_km,
     )
 
-    tp6_path = run_modtran(tape5_standoff, f"{case_name}_STANDOFF")
+    tp6_path = run_modtran(tape5_standoff, f"{case_name}_STAND")
     res = parse_tape6(tp6_path)
 
     path_mf = res["total_radiance"] * 1e6
@@ -374,7 +352,7 @@ def simulate_standoff(
 
 
 # -------------------------------
-# 6) Full standoff TUD (T, U, D)
+# 6) Standoff TUD (U_path + D_hemi + T_LOS)
 # -------------------------------
 def simulate_standoff_TUD(
     Tsurf: float,
@@ -388,36 +366,21 @@ def simulate_standoff_TUD(
     range_km: float = 1.0,
 ):
     """
-    Standoff TUD simulation in two steps:
+    Standoff TUD simulation (horizontal path):
 
-      1) STANDOFF case (horizontal LOS, `tape5_template_standoff`)
-         -> T_LOS(λ) and atmospheric path radiance (Upwelling-equivalent).
+      1) STANDOFF CASE (tape5_template_standoff)
+         -> T_LOS(λ) and U_path(λ) = path radiance (upwelling-equivalent)
 
-      2) DOWN case (`tape5_template_down`)
-         -> hemispheric downwelling D(λ) at the ground.
+      2) DOWN CASE (tape5_template_down, same as nadir TUD)
+         -> hemispheric downwelling D(λ) at the ground
 
-    Notes:
-      * For a "pure" atmospheric TUD as in the paper, the standoff
-        template should use a very cold, black ground (T ~ 0 K,
-        reflectance ~ 0), and the DOWN template a perfectly reflective
-        ground (reflectance = 1).
+    The combination (T_LOS, U_path, D) can be used to train TES models with
+    standoff geometry.
     """
-    global MODTRAN_DIR, OUTPUTS_DIR
-
-    if MODTRAN_DIR is None:
-        raise RuntimeError(
-            "MODTRAN_DIR is not set. Use set_modtran_dir('path/to/PcModWin5/Bin') "
-            "before calling run_standoff()."
-        )
-
-    if OUTPUTS_DIR is None:
-        OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
-        os.makedirs(OUTPUTS_DIR, exist_ok=True)
-
-    # ---- 1) STANDOFF CASE: horizontal path
-    tape5_stand = build_tape5(
-        "tape5_template_standoff",
+    # ---- 1) standoff LOS ----
+    stand = simulate_standoff(
         Tsurf,
+        case_name,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
         h1=h1,
@@ -426,14 +389,13 @@ def simulate_standoff_TUD(
         sensor_width=sensor_width,
         range_km=range_km,
     )
-    tp6_stand_path = run_modtran(tape5_stand, f"{case_name}_STAND")
-    res_stand = parse_tape6(tp6_stand_path)
 
-    lam = res_stand["wavelength"]
-    T_los = res_stand["transmittance"]
-    U_path = res_stand["total_radiance"] * 1e6  # microflicks
+    lam = stand["wavelength"]
+    T_los = stand["transmittance"]
+    U_path = stand["path_radiance"]
 
-    # ---- 2) DOWN CASE: hemispheric downwelling at ground
+    # ---- 2) hemispheric downwelling (reuse existing DOWN template) ----
+    # Use the same call as in simulate_one but only keep the DOWN result.
     tape5_down = build_tape5(
         "tape5_template_down",
         Tsurf,
@@ -446,8 +408,7 @@ def simulate_standoff_TUD(
     )
     tp6_down_path = run_modtran(tape5_down, f"{case_name}_DOWN")
     res_down = parse_tape6(tp6_down_path)
-
-    D_hemi = res_down["total_radiance"] * 1e6  # microflicks
+    D_hemi = res_down["total_radiance"] * 1e6
 
     return {
         "wavelength": lam,
@@ -460,6 +421,6 @@ def simulate_standoff_TUD(
         "h1": h1,
         "h2": h2,
         "range_km": range_km,
-        "tp6_standoff": tp6_stand_path,
+        "tp6_standoff": stand["tp6"],
         "tp6_down": tp6_down_path,
     }

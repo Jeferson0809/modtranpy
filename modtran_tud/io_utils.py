@@ -4,13 +4,6 @@ import numpy as np
 def save_tud_npz(result, path: str) -> None:
     """
     Save a TUDResult object to a compressed .npz file.
-
-    Parameters
-    ----------
-    result : TUDResult
-        Output returned by run_TUD.
-    path : str
-        Output file path, e.g. 'T295_H1p0_O1p0.npz'.
     """
     np.savez(
         path,
@@ -30,6 +23,7 @@ def load_tud_npz(path: str):
     with save_tud_npz.
     """
     from . import TUDResult  # local import to avoid circular import
+
     data = np.load(path)
     return TUDResult(
         wavelength=data["wavelength"],
@@ -55,8 +49,8 @@ def save_standoff_npz(result, path: str) -> None:
         T_surface=result.T_surface,
         h2o_scale=result.h2o_scale,
         o3_scale=result.o3_scale,
-        h1=(np.nan if result.h1 is None else result.h1),
-        h2=(np.nan if result.h2 is None else result.h2),
+        h1=result.h1,
+        h2=result.h2,
         range_km=result.range_km,
     )
 
@@ -69,11 +63,6 @@ def load_standoff_npz(path: str):
     from . import StandoffResult
 
     data = np.load(path)
-
-    def _nan_to_none(val):
-        val = float(val)
-        return None if np.isnan(val) else val
-
     return StandoffResult(
         wavelength=data["wavelength"],
         transmittance=data["transmittance"],
@@ -82,7 +71,7 @@ def load_standoff_npz(path: str):
         T_surface=float(data["T_surface"]),
         h2o_scale=float(data["h2o_scale"]),
         o3_scale=float(data["o3_scale"]),
-        h1=_nan_to_none(data["h1"]),
-        h2=_nan_to_none(data["h2"]),
+        h1=float(data["h1"]),
+        h2=float(data["h2"]),
         range_km=float(data["range_km"]),
     )
