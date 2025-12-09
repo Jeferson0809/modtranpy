@@ -371,7 +371,7 @@ def simulate_standoff_TUD(
     range_km: float = 0.1,
     sensor_center: float | None = None,
     sensor_width: float | None = None,
-    T_cold: float = 1.0,
+    T_surf: float = 1.0,
 ):
     """
     Standoff-based TUD following the TES two-step description:
@@ -392,7 +392,7 @@ def simulate_standoff_TUD(
       - tape5_template_standoff_D   (down-looking to a unit-albedo ground)
 
     IMPORTANT:
-      The actual boundary temperature is controlled via T_cold, not the
+      The actual boundary temperature is controlled via T_surf, not the
       physical surface temperature you might use later for TES.
     """
     global MODTRAN_DIR, OUTPUTS_DIR
@@ -410,7 +410,7 @@ def simulate_standoff_TUD(
     # ---------- 1) Horizontal standoff path: T(λ) + L_path(λ) ----------
     tape5_up = build_tape5(
         "tape5_template_standoff",
-        Tsurf=T_cold,
+        Tsurf=T_surf,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
         h1=h_sensor,
@@ -429,7 +429,7 @@ def simulate_standoff_TUD(
     # ---------- 2) Down-looking to ground with SURREF=1 ----------
     tape5_down = build_tape5(
         "tape5_template_standoff_D",
-        Tsurf=T_cold,
+        Tsurf=T_surf,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
         h1=h_sensor,
@@ -452,7 +452,7 @@ def simulate_standoff_TUD(
         "h_sensor": h_sensor,
         "h_ground": h_ground,
         "range_km": range_km,
-        "T_cold": T_cold,
+        "T_surf": T_surf,
         "tp6_standup": tp6_up_path,
         "tp6_standd": tp6_down_path,
     }
