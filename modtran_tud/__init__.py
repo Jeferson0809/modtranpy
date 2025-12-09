@@ -175,7 +175,7 @@ def run_standoff_TUD(
     range_km: float = 0.1,
     sensor_center: float | None = None,
     sensor_width: float | None = None,
-    T_cold: float = 1.0,
+    T_surf: float = 1.0,
 ) -> TUDResult:
     """
     High-level interface for standoff-based TUD following the TES recipe:
@@ -190,7 +190,7 @@ def run_standoff_TUD(
         wavelength, transmittance, upwelling, downwelling
 
     NOTE:
-      T_cold is the boundary temperature used in both runs (≈ 0 K).
+      T_surf is the boundary temperature used in both runs (≈ 0 K).
       It is stored as T_surface in the output for bookkeeping only.
     """
     case_name = (
@@ -207,7 +207,7 @@ def run_standoff_TUD(
         range_km=range_km,
         sensor_center=sensor_center,
         sensor_width=sensor_width,
-        T_cold=T_cold,
+        T_surf=T_surf,
     )
 
     return TUDResult(
@@ -215,7 +215,7 @@ def run_standoff_TUD(
         transmittance=sim["transmittance"],
         upwelling=sim["up_microflicks"],
         downwelling=sim["down_microflicks"],
-        T_surface=T_cold,   # cold boundary temp used in the TES recipe
+        T_surface=T_surf,   # cold boundary temp used in the TES recipe
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
     )
