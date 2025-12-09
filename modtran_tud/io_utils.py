@@ -35,43 +35,42 @@ def load_tud_npz(path: str):
         o3_scale=float(data["o3_scale"]),
     )
 
-
 def save_standoff_npz(result, path: str) -> None:
     """
-    Save a StandoffResult object to a compressed .npz file.
+    Save a StandoffTUDResult object to a compressed .npz file.
     """
     np.savez(
         path,
         wavelength=result.wavelength,
         transmittance=result.transmittance,
-        path_radiance=result.path_radiance,
+        upwelling=result.upwelling,
+        downwelling=result.downwelling,
         T_surface=result.T_surface,
         h2o_scale=result.h2o_scale,
         o3_scale=result.o3_scale,
-        h1=result.h1 if result.h1 is not None else np.nan,
-        h2=result.h2 if result.h2 is not None else np.nan,
+        h_sensor_km=result.h_sensor_km,
+        h_top_km=result.h_top_km,
         range_km=result.range_km,
     )
 
 
 def load_standoff_npz(path: str):
     """
-    Load a StandoffResult object from a .npz file previously saved
+    Load a StandoffTUDResult object from a .npz file previously saved
     with save_standoff_npz.
     """
-    from . import StandoffResult  # local import to avoid circular import
+    from . import StandoffTUDResult  # avoid circular import
+
     data = np.load(path)
-    h1 = float(data["h1"])
-    h2 = float(data["h2"])
-    return StandoffResult(
+    return StandoffTUDResult(
         wavelength=data["wavelength"],
         transmittance=data["transmittance"],
-        path_radiance=data["path_radiance"],
+        upwelling=data["upwelling"],
+        downwelling=data["downwelling"],
         T_surface=float(data["T_surface"]),
         h2o_scale=float(data["h2o_scale"]),
         o3_scale=float(data["o3_scale"]),
-        h1=None if np.isnan(h1) else h1,
-        h2=None if np.isnan(h2) else h2,
+        h_sensor_km=float(data["h_sensor_km"]),
+        h_top_km=float(data["h_top_km"]),
         range_km=float(data["range_km"]),
     )
-

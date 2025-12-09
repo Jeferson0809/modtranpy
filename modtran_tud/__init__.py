@@ -39,13 +39,24 @@ class StandoffResult:
     h2: float | None
     range_km: float
 
+@dataclass
+class StandoffTUDResult:
+    wavelength: np.ndarray
+    transmittance: np.ndarray
+    upwelling: np.ndarray       # path radiance (µflick)
+    downwelling: np.ndarray     # hemispheric downwelling (µflick)
+    T_surface: float
+    h2o_scale: float
+    o3_scale: float
+    h_sensor_km: float
+    h_top_km: float
+    range_km: float
 
 __all__ = [
     "run_TUD",
-    "run_standoff_TUD",
     "TUDResult",
-    "run_standoff",
-    "StandoffResult",
+    "run_standoff_TUD",
+    "StandoffTUDResult",
     "set_modtran_dir",
     "plot_TUD",
     "plot_standoff",
@@ -54,6 +65,7 @@ __all__ = [
     "save_standoff_npz",
     "load_standoff_npz",
 ]
+
 
 # ----------------------
 # Configuración MODTRAN
@@ -154,35 +166,39 @@ def run_standoff(
         h2=sim["h2"],
         range_km=sim["range_km"],
     )
+
 def run_standoff_TUD(
     Tsurf: float,
     h2o_scale: float = 1.0,
     o3_scale: float = 1.0,
-    h1: float | None = None,
-    h2: float | None = None,
+    h_sensor_km: float = 0.0015,
+    h_top_km: float = 6.0,
     range_km: float = 0.1,
     sensor_center: float | None = None,
     sensor_width: float | None = None,
-) -> TUDResult:
+) -> StandoffTUDResult:
     """
-    TUD en geometría standoff:
-      - T_LOS(λ), upwelling de camino U_path(λ), downwelling hemisférico D(λ).
+    High-level interface for standoff TUD:
+      - horizontal path -> T_LOS(λ) + atmospheric path radiance (upwelling)
+      - down-looking near the ground -> hemispheric downwelling
+
+    All radiances are returned in microflicks (µW/cm^2/sr/µm).
     """
     case_name = f"STANDOFF_T{int(Tsurf)}".replace(".", "p")
 
     sim = simulate_standoff_TUD(
-        Tsurf,
-        case_name,
+        Tsurf=Tsurf,
+        case_name=case_name,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
-        h1=h1,
-        h2=h2,
+        h_sensor_km=h_sensor_km,
+        h_top_km=h_top_km,
+        range_km=range_km,
         sensor_center=sensor_center,
         sensor_width=sensor_width,
-        range_km=range_km,
     )
 
-    return TUDResult(
+    return StandoffTUDResult(
         wavelength=sim["wavelength"],
         transmittance=sim["transmittance"],
         upwelling=sim["up_microflicks"],
@@ -190,4 +206,8 @@ def run_standoff_TUD(
         T_surface=sim["T_surface"],
         h2o_scale=sim["h2o_scale"],
         o3_scale=sim["o3_scale"],
+        h_sensor_km=sim["h_sensor_km"],
+        h_top_km=sim["h_top_km"],
+        range_km=sim["range_km"],
     )
+
