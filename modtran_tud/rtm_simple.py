@@ -363,52 +363,37 @@ def simulate_standoff(
 
 
 def simulate_standoff_TUD(
-    Tsurf: float,
     case_name: str,
     h2o_scale: float,
     o3_scale: float,
-    h_sensor_km: float = 0.0015,   # ~1.5 m
-    h_top_km: float = 6.0,         # top of atmosphere column
+    h_sensor: float = 0.0015,
+    h_ground: float = 0.0,
     range_km: float = 0.1,
     sensor_center: float | None = None,
     sensor_width: float | None = None,
+    T_cold: float = 1.0,
 ):
     """
-    Full TUD for a standoff configuration, following the paper:
+    Standoff-based TUD following the TES two-step description:
 
-      1) Horizontal path at constant altitude (H1 = H2 = h_sensor_km)
-         -> line-of-sight transmittance T(λ) and atmospheric path radiance
-            (this is the "upwelling" term for TES).
+      1) STANDOFF_UP (horizontal path at h_sensor, range range_km):
+         - TPTEMP ~ 0 K
+         - SURREF = 0
+         -> we read:
+              * Line-of-sight transmittance T(λ)
+              * Path radiance L_path(λ) (treated as upwelling)
 
-      2) Down-looking configuration very close to the ground
-         with ground reflectance = 1 (handled in the template)
-         -> hemispheric downwelling D(λ) at the ground.
+      2) STANDOFF_D (sensor just above ground, SURREF = 1, TPTEMP ~ 0):
+         -> we read:
+              * Hemispherical downwelling L_down(λ)
 
-    Parameters
-    ----------
-    Tsurf : float
-        Ground temperature used in MODTRAN (for step 2).
-    h2o_scale, o3_scale : float
-        Scaling factors for water vapor and ozone.
-    h_sensor_km : float
-        Sensor height above ground in km (~0.0015 for 1.5 m).
-    h_top_km : float
-        Upper altitude for the down-looking atmosphere column (km).
-    range_km : float
-        Horizontal line-of-sight range for the standoff case.
-    sensor_center, sensor_width : float, optional
-        Spectral response parameters in cm^-1.
+    This function assumes the TAPE5 templates:
+      - tape5_template_standoff     (horizontal path)
+      - tape5_template_standoff_D   (down-looking to a unit-albedo ground)
 
-    Returns
-    -------
-    dict
-        {
-          "wavelength": λ[µm],
-          "transmittance": T_LOS(λ),
-          "up_microflicks": L_up(λ)  (path radiance, µflick),
-          "down_microflicks": L_down(λ)  (hemispheric downwelling, µflick),
-          ...
-        }
+    IMPORTANT:
+      The actual boundary temperature is controlled via T_cold, not the
+      physical surface temperature you might use later for TES.
     """
     global MODTRAN_DIR, OUTPUTS_DIR
 
@@ -422,44 +407,37 @@ def simulate_standoff_TUD(
         OUTPUTS_DIR = os.path.join(MODTRAN_DIR, "outputs_tape6")
         os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
-    # --------------------------------------------------
-    # 1) HORIZONTAL STANDOFF: T_LOS(λ) + path radiance
-    # --------------------------------------------------
-    tape5_stand = build_tape5(
+    # ---------- 1) Horizontal standoff path: T(λ) + L_path(λ) ----------
+    tape5_up = build_tape5(
         "tape5_template_standoff",
-        Tsurf,
+        Tsurf=T_cold,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
-        h1=h_sensor_km,
-        h2=h_sensor_km,
+        h1=h_sensor,
+        h2=h_sensor,
         sensor_center=sensor_center,
         sensor_width=sensor_width,
         range_km=range_km,
     )
+    tp6_up_path = run_modtran(tape5_up, f"{case_name}_STANDUP")
+    res_up = parse_tape6(tp6_up_path)
 
-    tp6_stand_path = run_modtran(tape5_stand, f"{case_name}_STAND")
-    res_stand = parse_tape6(tp6_stand_path)
+    lam = res_up["wavelength"]
+    T_los = res_up["transmittance"]
+    U_path = res_up["total_radiance"] * 1e6  # microflicks
 
-    lam = res_stand["wavelength"]
-    T_los = res_stand["transmittance"]
-    U_path = res_stand["total_radiance"] * 1e6  # microflicks
-
-    # --------------------------------------------------
-    # 2) DOWN-LOOKING: hemispheric downwelling at ground
-    # --------------------------------------------------
+    # ---------- 2) Down-looking to ground with SURREF=1 ----------
     tape5_down = build_tape5(
         "tape5_template_standoff_D",
-        Tsurf,
+        Tsurf=T_cold,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
-        # H2_VALUE H1_VALUE  -> first is top, second is sensor
-        h1=h_sensor_km,
-        h2=h_top_km,
+        h1=h_sensor,
+        h2=h_ground,
         sensor_center=sensor_center,
         sensor_width=sensor_width,
     )
-
-    tp6_down_path = run_modtran(tape5_down, f"{case_name}_STAND_D")
+    tp6_down_path = run_modtran(tape5_down, f"{case_name}_STANDD")
     res_down = parse_tape6(tp6_down_path)
 
     D_hemi = res_down["total_radiance"] * 1e6  # microflicks
@@ -469,13 +447,12 @@ def simulate_standoff_TUD(
         "transmittance": T_los,
         "up_microflicks": U_path,
         "down_microflicks": D_hemi,
-        "T_surface": Tsurf,
         "h2o_scale": h2o_scale,
         "o3_scale": o3_scale,
-        "h_sensor_km": h_sensor_km,
-        "h_top_km": h_top_km,
+        "h_sensor": h_sensor,
+        "h_ground": h_ground,
         "range_km": range_km,
-        "tp6_standoff": tp6_stand_path,
-        "tp6_down": tp6_down_path,
+        "T_cold": T_cold,
+        "tp6_standup": tp6_up_path,
+        "tp6_standd": tp6_down_path,
     }
-

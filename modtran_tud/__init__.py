@@ -168,46 +168,54 @@ def run_standoff(
     )
 
 def run_standoff_TUD(
-    Tsurf: float,
     h2o_scale: float = 1.0,
     o3_scale: float = 1.0,
-    h_sensor_km: float = 0.0015,
-    h_top_km: float = 6.0,
+    h_sensor: float = 0.0015,
+    h_ground: float = 0.0,
     range_km: float = 0.1,
     sensor_center: float | None = None,
     sensor_width: float | None = None,
-) -> StandoffTUDResult:
+    T_cold: float = 1.0,
+) -> TUDResult:
     """
-    High-level interface for standoff TUD:
-      - horizontal path -> T_LOS(λ) + atmospheric path radiance (upwelling)
-      - down-looking near the ground -> hemispheric downwelling
+    High-level interface for standoff-based TUD following the TES recipe:
 
-    All radiances are returned in microflicks (µW/cm^2/sr/µm).
+      - Horizontal path at h_sensor over range_km (tape5_template_standoff)
+          -> T(λ) and path radiance (treated as upwelling)
+      - Down-looking path from h_sensor to h_ground with SURREF=1
+          (tape5_template_standoff_D)
+          -> hemispherical downwelling radiance
+
+    Returns a TUDResult with:
+        wavelength, transmittance, upwelling, downwelling
+
+    NOTE:
+      T_cold is the boundary temperature used in both runs (≈ 0 K).
+      It is stored as T_surface in the output for bookkeeping only.
     """
-    case_name = f"STANDOFF_T{int(Tsurf)}".replace(".", "p")
+    case_name = (
+        f"STANDOFF_H{h_sensor:.4f}_R{range_km:.3f}_"
+        f"H2O{h2o_scale:.2f}_O3{o3_scale:.2f}"
+    ).replace(".", "p")
 
     sim = simulate_standoff_TUD(
-        Tsurf=Tsurf,
         case_name=case_name,
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
-        h_sensor_km=h_sensor_km,
-        h_top_km=h_top_km,
+        h_sensor=h_sensor,
+        h_ground=h_ground,
         range_km=range_km,
         sensor_center=sensor_center,
         sensor_width=sensor_width,
+        T_cold=T_cold,
     )
 
-    return StandoffTUDResult(
+    return TUDResult(
         wavelength=sim["wavelength"],
         transmittance=sim["transmittance"],
         upwelling=sim["up_microflicks"],
         downwelling=sim["down_microflicks"],
-        T_surface=sim["T_surface"],
-        h2o_scale=sim["h2o_scale"],
-        o3_scale=sim["o3_scale"],
-        h_sensor_km=sim["h_sensor_km"],
-        h_top_km=sim["h_top_km"],
-        range_km=sim["range_km"],
+        T_surface=T_cold,   # cold boundary temp used in the TES recipe
+        h2o_scale=h2o_scale,
+        o3_scale=o3_scale,
     )
-
