@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .plotting import plot_TUD, plot_standoff
-from .rtm_simple import simulate_one, simulate_standoff, simulate_standoff_TUD
+from .rtm_simple import simulate_one, simulate_standoff_TUD
 from .io_utils import (
     save_tud_npz,
     load_tud_npz,
