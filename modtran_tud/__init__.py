@@ -1,5 +1,3 @@
-# __init__.py dentro de modtran_tud
-
 from dataclasses import dataclass
 import numpy as np
 
@@ -11,10 +9,6 @@ from .io_utils import (
     save_standoff_npz,
     load_standoff_npz,
 )
-
-# ----------------------
-# Dataclasses de salida
-# ----------------------
 
 @dataclass
 class TUDResult:
@@ -68,7 +62,7 @@ __all__ = [
 
 
 # ----------------------
-# Configuración MODTRAN
+# MODTRAN configuration
 # ----------------------
 
 def set_modtran_dir(path: str):
@@ -122,50 +116,6 @@ def run_TUD(
         o3_scale=sim["o3_scale"],
     )
 
-# ----------------------
-# Standoff (solo path)
-# ----------------------
-
-def run_standoff(
-    Tsurf: float,
-    h2o_scale: float = 1.0,
-    o3_scale: float = 1.0,
-    h1: float | None = None,
-    h2: float | None = None,
-    range_km: float = 0.1,
-    sensor_center: float | None = None,
-    sensor_width: float | None = None,
-) -> StandoffResult:
-    """
-    High-level interface for horizontal standoff:
-      - T_LOS(λ): line-of-sight transmittance
-      - path_radiance(λ): atmospheric path radiance along LOS (µflick)
-    """
-    case_name = f"STANDOFF_T{int(Tsurf)}".replace(".", "p")
-
-    sim = simulate_standoff(
-        Tsurf,
-        case_name,
-        h2o_scale=h2o_scale,
-        o3_scale=o3_scale,
-        h1=h1,
-        h2=h2,
-        sensor_center=sensor_center,
-        sensor_width=sensor_width,
-        range_km=range_km,
-    )
-
-    return StandoffResult(
-        wavelength=sim["wavelength"],
-        transmittance=sim["transmittance"],
-        path_radiance=sim["path_radiance"],
-        T_surface=sim["T_surface"],
-        h2o_scale=sim["h2o_scale"],
-        o3_scale=sim["o3_scale"],
-        h1=sim["h1"],
-        h2=sim["h2"],
-        range_km=sim["range_km"],
-    )
 
 def run_standoff_TUD(
     h2o_scale: float = 1.0,
@@ -215,7 +165,7 @@ def run_standoff_TUD(
         transmittance=sim["transmittance"],
         upwelling=sim["up_microflicks"],
         downwelling=sim["down_microflicks"],
-        T_surface=T_surf,   # cold boundary temp used in the TES recipe
+        T_surface=T_surf,   
         h2o_scale=h2o_scale,
         o3_scale=o3_scale,
     )
